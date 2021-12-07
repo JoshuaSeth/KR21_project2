@@ -24,6 +24,12 @@ class BNReasoner:
 
     def d_separation(self, network, x, y, z):
         # test
+        #
+        #
+        #
+        ##
+        #
+        #
         z_parents = BN.get_parents(z)
         z_children = BN.get_children(z)
         print(z_children)
