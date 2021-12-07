@@ -24,7 +24,6 @@ def get_marginal_distribution(Q, E):
 
 cpt_1 = BN.get_cpt("hear-bark")
 cpt_2 = BN.get_cpt("dog-out")
-print(cpt_1)
-print(cpt_2)
-t = BR.multiply_cpts(cpt_1, cpt_2)
+factor_product = BR.multiply_cpts(cpt_1, cpt_2)
+
 print(t)
