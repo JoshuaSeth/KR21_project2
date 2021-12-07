@@ -14,17 +14,9 @@ class BNReasoner:
             self.bn.load_from_bifxml(net)
         else:
             self.bn = net
-            
-    def get_z_parents(self, z):
-        variables_to_check = BN.get_parents(z)
-        z_parents = set()
-        while variables_to_check:
-            var_to_check = variables_to_check.pop()
-            z_parents.add(var_to_check)
-        return z_parents
 
     def d_separation(self, x, y, z):
-            z_parents = self.get_z_parents(z)
+            z_parents = self.get_parents(z)
             nodes_to_visit = [(x, 'asc')]
             already_visited = set()
 
