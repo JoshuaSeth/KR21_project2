@@ -1,3 +1,4 @@
+'''File for testing implementations of functions and designing the functions before throwing them in the BNReasoner class.'''
 from BayesNet import BayesNet
 import pandas as pd
 import copy
