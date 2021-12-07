@@ -2,6 +2,7 @@ from typing import Union
 from BayesNet import BayesNet
 import copy
 import pandas as pd
+import networkx as nx
 
 
 class BNReasoner:
@@ -114,12 +115,70 @@ class BNReasoner:
 
         return multiplied_cpt
 
+    def get_all_paths(self, start_node, end_node):
+        '''Returns all paths between nodes'''
+        temp_network = copy.deepcopy(self.bn.structure)
+        for edge in temp_network.edges:
+            temp_network.add_edge(edge[1], edge[0])
+        return nx.all_simple_paths(temp_network, source=start_node, target=end_node)
+
+    def triple_active(self, nodes, evidence):
+        for node in nodes:
+            # 1. Determine the relationships
+            other_nodes = [o_node for o_node in nodes if o_node != node]
+            children = self.bn.get_children([node])
+            parents = self.bn.get_parents([node])
+            descendants = nx.descendants(self.bn.structure, node)
+            ancestors = nx.ancestors(self.bn.structure, node)
+
+            # 2. Find out which node is the middle node if causal relationship
+            middle_node = "None yet"
+            for alt_node in nodes:
+                other_nodes_2 = [
+                    o_node for o_node in nodes if o_node != alt_node]
+                if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
+                    middle_node = alt_node
+            print("t", node, other_nodes, children)
+
+            # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
+            if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
+                print("V", nodes)
+                return True
+            if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
+                print("common-cause", nodes)
+                return True
+            if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
+                if middle_node not in evidence:
+                    print("causal", nodes, "middle node", middle_node)
+                    return True
+            if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
+                if middle_node not in evidence:
+                    print("inverse-causal", nodes)
+                    return True
+        return False  # If none of the rules made the triple active the triple is false
+
+    def d_separation_alt(self, var_1, var_2, evidence):
+        '''Given two variables and evidence returns if it is garantued that they are independent. False means the variables are NOT garantued to independent. True means they are independent. Example usage: \n\n
+        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]'''
+        for path in self.get_all_paths(var_1, var_2):
+            active_path = True
+            print("path", path)
+            triples = [[path[i], path[i+1], path[i+2]]
+                       for i in range(len(path)-2)]
+            for triple in triples:
+                # Single inactive triple makes whole path inactive
+                if not self.triple_active(triple, evidence):
+                    active_path = False
+            if active_path:
+                return False  # indepence NOT garantued if any path active
+        return True  # Indpendence garantued if no path active
+
 
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
 BN = BayesNet()
 network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
 BN.draw_structure()
-test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
-print(test)
+# test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
+# print(test)
 
 # TODO: This is where your methods should go
