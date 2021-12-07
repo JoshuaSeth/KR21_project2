@@ -16,12 +16,11 @@ class BNReasoner:
             self.bn = net
             
     def get_z_parents(self, z):
-        variables_to_check = copy(z)
+        variables_to_check = BN.get_parents(z)
         z_parents = set()
         while variables_to_check:
-            var_to_check = self.structure.nodes[variables_to_check.pop()]
-        for parent in var_to_check.parents:
-            z_parents.add(parent)
+            var_to_check = variables_to_check.pop()
+            z_parents.add(var_to_check)
         return z_parents
 
     def d_separation(self, x, y, z):
