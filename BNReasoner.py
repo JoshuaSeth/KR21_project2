@@ -14,39 +14,45 @@ class BNReasoner:
             self.bn.load_from_bifxml(net)
         else:
             self.bn = net
-
-    def d_separation(self, x, y, z):
-            z_parents = self.get_parents(z)
+            
+    def d_separation(self, network, x, y, z):
+            z_parents = BN.get_parents(z)
+            z_children = BN.get_children(z)
+            print(z_children)
+            print(z_parents)
             nodes_to_visit = [(x, 'asc')]
             already_visited = set()
+            nodes = set(BN.get_all_variables())
 
             while nodes_to_visit:
-                node_name, up_or_down = nodes_to_visit.pop()
-                node = self.structure.nodes[node_name]
+                (node_name, up_or_down) = nodes_to_visit.pop()
 
-                if (node_name, up_or_down) not in already_visited:
+                if (node_name, up_or_down) not in already_visited: # if current visiting node is not already_visited, skip it
                     already_visited.add((node_name, up_or_down))
 
-                    if node_name not in z and node_name == y:
+                    if node_name not in z and node_name == y: # if we reach the end, no d-separation
                         return False
 
                     if up_or_down == 'asc' and node_name not in z:
-                        for parent in self.structure.parents:
-                            nodes_to_visit.append((parent,'asc'))
-                        for child in self.structure.children:
+                        for parent in z_parents:
+                            nodes_to_visit.append((parent, 'asc'))
+                        for child in z_children:
                             nodes_to_visit.append((child, 'des'))
-
                     elif up_or_down == 'des':
                         if node_name not in z:
-                            for child in node.children:
+                            for child in z_children:
                                 nodes_to_visit.append((child, 'des'))
                         if node_name in z or node_name in z_parents:
-                            for parent in node.parents:
-                                nodes_to_visit.append((parent, 'asc'))
+                            for parents in z_parents:
+                                nodes_to_visit.append((parents, 'asc'))
             return True
-    
+        
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
-reasoner.d_separation('light-on', 'hear-bark', ['family-out'])
+BN = BayesNet()
+network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
+BN.draw_structure()
+test= reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
+print(test)
 
             
     # TODO: This is where your methods should go
