@@ -2,8 +2,8 @@ from typing import Union
 from BayesNet import BayesNet
 import copy
 import pandas as pd
-import networkx as nx
 
+'''test''' 
 
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
@@ -18,18 +18,7 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def get_all_paths(self, start_node, end_node):
-        '''Returns all possible paths between '''
-        return nx.all_simple_paths(self.bn.structure, start_node, end_node)
-
     def d_separation(self, network, x, y, z):
-        # test
-        #
-        #
-        #
-        ##
-        #
-        #
         z_parents = BN.get_parents(z)
         z_children = BN.get_children(z)
         print(z_children)
