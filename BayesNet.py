@@ -84,7 +84,11 @@ class BayesNet:
         :return: List of children
         """
         return [c for c in self.structure.successors(variable)]
-
+    
+    def get_parents(self, z) -> List[str]:
+        for i in range(len(z)):
+            return [c for c in self.structure.predecessors(z[i])]
+        
     def get_cpt(self, variable: str) -> pd.DataFrame:
         """
         Returns the conditional probability table of a variable in the BN.
