@@ -51,7 +51,10 @@ class BNReasoner:
         return True
 
     def multiply_cpts(self, cpt_1, cpt_2):
-        '''Given 2 probability tables multiplies them and returns the multiplied CPT'''
+        '''Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
+        \ncpt_1 = BN.get_cpt("hear-bark")
+        \ncpt_2 = BN.get_cpt("dog-out")
+        \nfactor_product = BR.multiply_cpts(cpt_1, cpt_2)'''
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
         vars_to_add = [col for col in list(
