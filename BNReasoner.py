@@ -3,7 +3,6 @@ from BayesNet import BayesNet
 import copy
 import pandas as pd
 
-'''test''' 
 
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
