@@ -94,6 +94,26 @@ class BNReasoner:
 
         return new_cpt
 
+    def get_marginal_distribution(self, Q, E):
+        '''Returns the conditional probability table for variables in Q with the variables in E marginalized out. \n Q: list of variables for which you want a probability table. \n E: list of variables that need to be marginalized out. \n\n Example usage: \n m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])'''
+        # 1. multiply CPTs for different variables in Q to 1 big CPT
+        # Get cpts for vars
+        cpts = [self.bn.get_cpt(var) for var in Q]
+        # Multiply them into 1 big cpt
+        multiplied_cpt = cpts[0]
+        for i in range(1, len(cpts)):
+            cpt = cpts[i]
+            multiplied_cpt = self.multiply_cpts(multiplied_cpt, cpt)
+
+        # 2. marginalize out variables in E
+        for var in E:
+            multiplied_cpt.drop(var, 1, inplace=True)
+        # Sum up p for rows that are the same
+        multiplied_cpt = multiplied_cpt.groupby(
+            list(multiplied_cpt)[:-1]).sum().reset_index()
+
+        return multiplied_cpt
+
 
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
 BN = BayesNet()
