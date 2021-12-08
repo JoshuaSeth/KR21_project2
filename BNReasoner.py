@@ -185,20 +185,57 @@ class BNReasoner:
                 return False  # indepence NOT garantued if any path active
         return True  # Indpendence garantued if no path active
 
-    def get_number_of_edges(self, X: str):
-        int_graph = self.bn.get_interaction_graph()
-        num_edges = len(int_graph[X])
-        return num_edges
-
-    def min_degree_ordening(self, X: list):
-        all_degrees = []
-        for element in X:
-            number_of_edges = self.get_number_of_edges(element)
-            all_degrees.append(number_of_edges)
-        dict_of_degrees = dict(zip(X, all_degrees))  # unsorted
-        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(
-        ), key=lambda item: item[1]))  # lowest values first, for easy of use
+    def min_degree_ordening(self, X: list) -> dict:
+        all_degrees  = []
+        all_degrees = [self.number_of_edges(e) for e in X]
+        dict_of_degrees = dict(zip(X, all_degrees)) # unsorted
+        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(), key = lambda item: item[1])) # lowest values first, for easy of use, can chance to list
         return dict_of_degrees_sorted
+    
+    def number_of_edges(self, X: str) -> int:
+        length = len(int_graph[X])
+        return length
+        # wrote this but.. can use network.number_of_edges(u, v) where u and v are nodes to count between, empty input = all edges
+
+    def get_all_triangles(self, network):
+        all_linked_nodes = list(nx.enumerate_all_cliques(network))
+        all_triangles = [c for c in all_linked_nodes if len(c) == 3]
+        return all_triangles[0] # was double list brackets, might be a problem later if multiple triangles?
+
+    def nodes_with_1_edge(self, network): # gets all nodes with a single edge in a given interaction network
+        single_connection_node = []
+        for i in BN.get_all_variables():
+            all_linked_nodes = network[i]
+            if len(all_linked_nodes) == 1:
+                single_connection_node.append(i)
+        return single_connection_node
+
+    def get_only_triangle_node(self, int_graph, all_nodes: list) -> str:
+        for elements in all_nodes:
+            connections = list(int_graph[elements])
+            lst_check = all(elem in all_nodes for elem in connections) # checking which connections are only within the triangle
+            if lst_check == True:
+                var_to_remove = elements
+        return var_to_remove
+
+    def min_fill_ordening(self, network) -> dict:
+        '''
+        current idea to check the interaction graph for triangles, 
+        because we know that if there is a triangle, 
+        we can remove the node which only has connections to other nodes within this triangle.
+
+        another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
+        '''
+        nodes_with_value_0 = []
+        all_triangles = self.get_all_triangles(network) # get all triangles
+        triangle_node_to_remove = self.get_only_triangle_node(network, all_triangles) # get all nodes from triangles which can be deleted without adding edge
+        nodes_with_value_0.append(triangle_node_to_remove) # add triangle nodes to value 0 list
+        single_edge_nodes = self.nodes_with_1_edge(network) # get all single edge nodes
+        for elements in single_edge_nodes:
+            nodes_with_value_0.append(elements)
+        lst_0 = [0] * len(nodes_with_value_0)
+        min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
+        print(min_fill_dict)
 
 
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
