@@ -3,8 +3,6 @@ from BayesNet import BayesNet
 import copy
 import pandas as pd
 
-'''test''' 
-
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
         """
@@ -115,12 +113,40 @@ class BNReasoner:
 
         return multiplied_cpt
 
+    def pruner(self, Q, E): # should I also include Q? Why? 
+        '''Returns pruned network for given variables Q and evidence E'''
+        # deleting leaf nodes 
+        variables = self.bn.get_all_variables()
+        for variable in variables: 
+            # if variable is not part of the selected variables ...
+            if variable not in Q and variable not in E: 
+                children = self.bn.get_children([variable])
+                # ... and has no children, then delete it 
+                if not children:
+                    self.bn.del_var(variable) 
 
+        # deleting outgoing edges from E
+        for evidence in E:
+            children = self.bn.get_children([evidence])
+            for child in children:
+                self.bn.del_edge((evidence, child))
+
+        return self.bn
+
+
+# test pruner
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+bn_grass.bn.draw_structure()
+bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
+bn_grass.bn.draw_structure()
+
+
+# test d-separation
+'''
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
 BN = BayesNet()
 network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
 BN.draw_structure()
 test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
 print(test)
-
-# TODO: This is where your methods should go
+'''
