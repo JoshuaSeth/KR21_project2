@@ -103,7 +103,7 @@ class BNReasoner:
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
         Q: list of variables for which you want a probability table.
         E: list of variables that need to be marginalized out.
-        
+
         Example usage: 
         m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])
         """
@@ -150,22 +150,17 @@ class BNReasoner:
                     o_node for o_node in nodes if o_node != alt_node]
                 if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
                     middle_node = alt_node
-            print("t", node, other_nodes, children)
 
             # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
             if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
-                print("V", nodes)
                 return True
             if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
-                print("common-cause", nodes)
                 return True
             if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
                 if middle_node not in evidence:
-                    print("causal", nodes, "middle node", middle_node)
                     return True
             if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
                 if middle_node not in evidence:
-                    print("inverse-causal", nodes)
                     return True
         return False  # If none of the rules made the triple active the triple is false
 
@@ -174,13 +169,13 @@ class BNReasoner:
         Given two variables and evidence returns if it is garantued that they are independent. 
         False means the variables are NOT garantued to independent. 
         True means they are independent. 
-        
+
         Example usage:
         var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
+        print(BR.d-separation_alt(var_1, var_2, evidence))
         """
         for path in self.get_all_paths(var_1, var_2):
             active_path = True
-            print("path", path)
             triples = [[path[i], path[i+1], path[i+2]]
                        for i in range(len(path)-2)]
             for triple in triples:
