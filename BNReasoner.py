@@ -65,7 +65,8 @@ class BNReasoner:
         new_cpt_cols = cpt_1_no_p + vars_to_add
         index_cols_of_first_cpt = len(cpt_1_no_p)
         new_cpt_len = pow(2, len(new_cpt_cols)-1)
-        new_cpt = pd.DataFrame(columns=new_cpt_cols, index=range(new_cpt_len))
+        new_cpt = pd.DataFrame(columns=new_cpt_cols,
+                               index=range(new_cpt_len), dtype=object)
 
         # 3. Fill in CPT with Trues and falses
         for i in range(len(new_cpt_cols)-1):
@@ -172,20 +173,22 @@ class BNReasoner:
             if active_path:
                 return False  # indepence NOT garantued if any path active
         return True  # Indpendence garantued if no path active
-    
+
     def get_number_of_edges(self, X: str):
         int_graph = BN.get_interaction_graph()
         num_edges = len(int_graph[X])
         return num_edges
 
     def min_degree_ordening(self, X: list):
-        all_degrees  = []
+        all_degrees = []
         for element in X:
             number_of_edges = self.get_number_of_edges(element)
             all_degrees.append(number_of_edges)
-        dict_of_degrees = dict(zip(X, all_degrees)) # unsorted
-        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(), key = lambda item: item[1])) # lowest values first, for easy of use
+        dict_of_degrees = dict(zip(X, all_degrees))  # unsorted
+        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(
+        ), key=lambda item: item[1]))  # lowest values first, for easy of use
         return dict_of_degrees_sorted
+
 
 reasoner = BNReasoner('testing/dog_problem.BIFXML')
 BN = BayesNet()
