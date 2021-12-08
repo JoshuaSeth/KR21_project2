@@ -1,7 +1,13 @@
 from typing import Union
+from xml.etree.ElementTree import TreeBuilder
+
+from numpy import multiply
 from BayesNet import BayesNet
 import copy
 import pandas as pd
+pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
+import networkx as nx
+
 
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
@@ -63,7 +69,7 @@ class BNReasoner:
         new_cpt_cols = cpt_1_no_p + vars_to_add
         index_cols_of_first_cpt = len(cpt_1_no_p)
         new_cpt_len = pow(2, len(new_cpt_cols)-1)
-        new_cpt = pd.DataFrame(columns=new_cpt_cols, index=range(new_cpt_len))
+        new_cpt = pd.DataFrame(columns=new_cpt_cols, index=range(new_cpt_len),dtype=object)
 
         # 3. Fill in CPT with Trues and falses
         for i in range(len(new_cpt_cols)-1):
@@ -113,7 +119,7 @@ class BNReasoner:
 
         return multiplied_cpt
 
-    def pruner(self, Q, E): # should I also include Q? Why? 
+    def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
         # deleting leaf nodes 
         variables = self.bn.get_all_variables()
@@ -132,14 +138,131 @@ class BNReasoner:
                 self.bn.del_edge((evidence, child))
 
         return self.bn
+    
+    def get_all_paths(self, start_node, end_node):
+        '''Returns all paths between nodes'''
+        temp_network = copy.deepcopy(self.bn.structure)
+        for edge in temp_network.edges:
+            temp_network.add_edge(edge[1], edge[0])
+        return nx.all_simple_paths(temp_network, source=start_node, target=end_node)
 
+    def triple_active(self, nodes, evidence):
+        for node in nodes:
+            # 1. Determine the relationships
+            other_nodes = [o_node for o_node in nodes if o_node != node]
+            children = self.bn.get_children([node])
+            parents = self.bn.get_parents([node])
+            descendants = nx.descendants(self.bn.structure, node)
+            ancestors = nx.ancestors(self.bn.structure, node)
+
+            # 2. Find out which node is the middle node if causal relationship
+            middle_node = "None yet"
+            for alt_node in nodes:
+                other_nodes_2 = [
+                    o_node for o_node in nodes if o_node != alt_node]
+                if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
+                    middle_node = alt_node
+            print("t", node, other_nodes, children)
+
+            # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
+            if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
+                print("V", nodes)
+                return True
+            if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
+                print("common-cause", nodes)
+                return True
+            if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
+                if middle_node not in evidence:
+                    print("causal", nodes, "middle node", middle_node)
+                    return True
+            if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
+                if middle_node not in evidence:
+                    print("inverse-causal", nodes)
+                    return True
+        return False  # If none of the rules made the triple active the triple is false
+
+    def d_separation_alt(self, var_1, var_2, evidence):
+        '''Given two variables and evidence returns if it is garantued that they are independent. False means the variables are NOT garantued to independent. True means they are independent. Example usage: \n\n
+        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]'''
+        for path in self.get_all_paths(var_1, var_2):
+            active_path = True
+            print("path", path)
+            triples = [[path[i], path[i+1], path[i+2]]
+                       for i in range(len(path)-2)]
+            for triple in triples:
+                # Single inactive triple makes whole path inactive
+                if not self.triple_active(triple, evidence):
+                    active_path = False
+            if active_path:
+                return False  # indepence NOT garantued if any path active
+        return True  # Indpendence garantued if no path active
+
+    def get_joint_probability_distribution(self):
+        '''Returns full joint probability distribution table when applied to a 
+        Bayesian Network'''
+        all_variables = self.bn.get_all_variables()
+        final_table = self.bn.get_cpt(all_variables[0])
+
+        # multiplies all CPT to get a JPD
+        for i in range(1,len(all_variables)):
+            table_i = self.bn.get_cpt(all_variables[i])
+            final_table = self.multiply_cpts(final_table, table_i)
+        
+        return final_table
+
+    def summing_out(self, sum_out_variables):
+        '''Takes set of variables that needs to be summed out as an input and 
+        returns joint probability distribution table with given variables 
+        eliminated when applied to a Bayesian Network'''
+        # get full JPD
+        JPD = self.get_joint_probability_distribution()
+
+        # delete columns of variables that need to be summed out
+        JPD = JPD.drop(columns=list(sum_out_variables))
+
+        # sum up p values of remaining rows if the are similar 
+        remaining_columns = list(set(self.bn.get_all_variables()) - set(sum_out_variables))
+        PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
+
+        return PD_new
+
+# test summing-out
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?','Rain?')))
+
+# test get JPD 
+'''
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+print(bn_grass.get_joint_probability_distribution())
+print(bn_grass.get_joint_probability_distribution().sum())
+'''
+
+# test 2 multiplying factors
+'''
+BN = BayesNet()
+BN.load_from_bifxml('testing/lecture_example.BIFXML')
+BR = BNReasoner(BN)
+cpt_1, cpt_2 = BN.get_cpt('Winter?'), BN.get_cpt('Sprinkler?')
+print(BR.multiply_cpts(cpt_1, cpt_2))
+'''
+
+# test multiplying factors
+'''
+BN = BNReasoner('testing/dog_problem.BIFXML')
+cpt_1 = BN.bn.get_cpt("hear-bark")
+cpt_2 = BN.bn.get_cpt("dog-out")
+print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
+factor_product = BN.multiply_cpts(cpt_1, cpt_2)
+print('factor_product:', factor_product) 
+'''
 
 # test pruner
+'''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 bn_grass.bn.draw_structure()
 bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
 bn_grass.bn.draw_structure()
-
+'''
 
 # test d-separation
 '''
@@ -149,4 +272,7 @@ network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
 BN.draw_structure()
 test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
 print(test)
+
+# test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
+# print(test)
 '''
