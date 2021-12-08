@@ -56,10 +56,12 @@ class BNReasoner:
         return True
 
     def multiply_cpts(self, cpt_1, cpt_2):
-        '''Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
-        \ncpt_1 = BN.get_cpt("hear-bark")
-        \ncpt_2 = BN.get_cpt("dog-out")
-        \nfactor_product = BR.multiply_cpts(cpt_1, cpt_2)'''
+        """
+        Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
+        cpt_1 = BN.get_cpt("hear-bark")
+        cpt_2 = BN.get_cpt("dog-out")
+        factor_product = BR.multiply_cpts(cpt_1, cpt_2)
+        """
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
         vars_to_add = [col for col in list(
@@ -69,7 +71,8 @@ class BNReasoner:
         new_cpt_cols = cpt_1_no_p + vars_to_add
         index_cols_of_first_cpt = len(cpt_1_no_p)
         new_cpt_len = pow(2, len(new_cpt_cols)-1)
-        new_cpt = pd.DataFrame(columns=new_cpt_cols, index=range(new_cpt_len),dtype=object)
+        new_cpt = pd.DataFrame(columns=new_cpt_cols,
+                               index=range(new_cpt_len), dtype=object)
 
         # 3. Fill in CPT with Trues and falses
         for i in range(len(new_cpt_cols)-1):
@@ -100,7 +103,14 @@ class BNReasoner:
         return new_cpt
 
     def get_marginal_distribution(self, Q, E):
-        '''Returns the conditional probability table for variables in Q with the variables in E marginalized out. \n Q: list of variables for which you want a probability table. \n E: list of variables that need to be marginalized out. \n\n Example usage: \n m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])'''
+        """
+        Returns the conditional probability table for variables in Q with the variables in E marginalized out.
+        Q: list of variables for which you want a probability table.
+        E: list of variables that need to be marginalized out.
+
+        Example usage: 
+        m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])
+        """
         # 1. multiply CPTs for different variables in Q to 1 big CPT
         # Get cpts for vars
         cpts = [self.bn.get_cpt(var) for var in Q]
@@ -140,7 +150,9 @@ class BNReasoner:
         return self.bn
     
     def get_all_paths(self, start_node, end_node):
-        '''Returns all paths between nodes'''
+        """
+        Returns all paths between nodes
+        """
         temp_network = copy.deepcopy(self.bn.structure)
         for edge in temp_network.edges:
             temp_network.add_edge(edge[1], edge[0])
@@ -162,31 +174,31 @@ class BNReasoner:
                     o_node for o_node in nodes if o_node != alt_node]
                 if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
                     middle_node = alt_node
-            print("t", node, other_nodes, children)
 
             # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
             if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
-                print("V", nodes)
                 return True
             if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
-                print("common-cause", nodes)
                 return True
             if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
                 if middle_node not in evidence:
-                    print("causal", nodes, "middle node", middle_node)
                     return True
             if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
                 if middle_node not in evidence:
-                    print("inverse-causal", nodes)
                     return True
         return False  # If none of the rules made the triple active the triple is false
 
     def d_separation_alt(self, var_1, var_2, evidence):
-        '''Given two variables and evidence returns if it is garantued that they are independent. False means the variables are NOT garantued to independent. True means they are independent. Example usage: \n\n
-        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]'''
+        """
+        Given two variables and evidence returns if it is garantued that they are independent. 
+        False means the variables are NOT garantued to independent. True means they are independent. 
+
+        Example usage:
+        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
+        print(BR.d-separation_alt(var_1, var_2, evidence))
+        """
         for path in self.get_all_paths(var_1, var_2):
             active_path = True
-            print("path", path)
             triples = [[path[i], path[i+1], path[i+2]]
                        for i in range(len(path)-2)]
             for triple in triples:
@@ -225,6 +237,58 @@ class BNReasoner:
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
 
         return PD_new
+    def min_degree_ordening(self, X: list) -> dict:
+        all_degrees  = []
+        all_degrees = [self.number_of_edges(e) for e in X]
+        dict_of_degrees = dict(zip(X, all_degrees)) # unsorted
+        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(), key = lambda item: item[1])) # lowest values first, for easy of use, can chance to list
+        return dict_of_degrees_sorted
+    
+    def number_of_edges(self, X: str) -> int:
+        length = len(int_graph[X])
+        return length
+        # wrote this but.. can use network.number_of_edges(u, v) where u and v are nodes to count between, empty input = all edges
+
+    def get_all_triangles(self, network):
+        all_linked_nodes = list(nx.enumerate_all_cliques(network))
+        all_triangles = [c for c in all_linked_nodes if len(c) == 3]
+        return all_triangles[0] # was double list brackets, might be a problem later if multiple triangles?
+
+    def nodes_with_1_edge(self, network): # gets all nodes with a single edge in a given interaction network
+        single_connection_node = []
+        for i in BN.get_all_variables():
+            all_linked_nodes = network[i]
+            if len(all_linked_nodes) == 1:
+                single_connection_node.append(i)
+        return single_connection_node
+
+    def get_only_triangle_node(self, int_graph, all_nodes: list) -> str:
+        for elements in all_nodes:
+            connections = list(int_graph[elements])
+            lst_check = all(elem in all_nodes for elem in connections) # checking which connections are only within the triangle
+            if lst_check == True:
+                var_to_remove = elements
+        return var_to_remove
+
+    def min_fill_ordening(self, network) -> dict:
+        '''
+        current idea to check the interaction graph for triangles, 
+        because we know that if there is a triangle, 
+        we can remove the node which only has connections to other nodes within this triangle.
+
+        another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
+        '''
+        nodes_with_value_0 = []
+        all_triangles = self.get_all_triangles(network) # get all triangles
+        triangle_node_to_remove = self.get_only_triangle_node(network, all_triangles) # get all nodes from triangles which can be deleted without adding edge
+        nodes_with_value_0.append(triangle_node_to_remove) # add triangle nodes to value 0 list
+        single_edge_nodes = self.nodes_with_1_edge(network) # get all single edge nodes
+        for elements in single_edge_nodes:
+            nodes_with_value_0.append(elements)
+        lst_0 = [0] * len(nodes_with_value_0)
+        min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
+        print(min_fill_dict)
+
 
 # test summing-out
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
