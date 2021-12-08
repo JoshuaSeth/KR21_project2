@@ -167,8 +167,7 @@ class BNReasoner:
     def d_separation_alt(self, var_1, var_2, evidence):
         """
         Given two variables and evidence returns if it is garantued that they are independent. 
-        False means the variables are NOT garantued to independent. 
-        True means they are independent. 
+        False means the variables are NOT garantued to independent. True means they are independent. 
 
         Example usage:
         var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
