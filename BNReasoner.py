@@ -52,10 +52,12 @@ class BNReasoner:
         return True
 
     def multiply_cpts(self, cpt_1, cpt_2):
-        '''Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
-        \ncpt_1 = BN.get_cpt("hear-bark")
-        \ncpt_2 = BN.get_cpt("dog-out")
-        \nfactor_product = BR.multiply_cpts(cpt_1, cpt_2)'''
+        """
+        Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
+        cpt_1 = BN.get_cpt("hear-bark")
+        cpt_2 = BN.get_cpt("dog-out")
+        factor_product = BR.multiply_cpts(cpt_1, cpt_2)
+        """
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
         vars_to_add = [col for col in list(
@@ -97,7 +99,14 @@ class BNReasoner:
         return new_cpt
 
     def get_marginal_distribution(self, Q, E):
-        '''Returns the conditional probability table for variables in Q with the variables in E marginalized out. \n Q: list of variables for which you want a probability table. \n E: list of variables that need to be marginalized out. \n\n Example usage: \n m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])'''
+        """
+        Returns the conditional probability table for variables in Q with the variables in E marginalized out.
+        Q: list of variables for which you want a probability table.
+        E: list of variables that need to be marginalized out.
+        
+        Example usage: 
+        m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])
+        """
         # 1. multiply CPTs for different variables in Q to 1 big CPT
         # Get cpts for vars
         cpts = [self.bn.get_cpt(var) for var in Q]
@@ -117,7 +126,9 @@ class BNReasoner:
         return multiplied_cpt
 
     def get_all_paths(self, start_node, end_node):
-        '''Returns all paths between nodes'''
+        """
+        Returns all paths between nodes
+        """
         temp_network = copy.deepcopy(self.bn.structure)
         for edge in temp_network.edges:
             temp_network.add_edge(edge[1], edge[0])
@@ -159,8 +170,14 @@ class BNReasoner:
         return False  # If none of the rules made the triple active the triple is false
 
     def d_separation_alt(self, var_1, var_2, evidence):
-        '''Given two variables and evidence returns if it is garantued that they are independent. False means the variables are NOT garantued to independent. True means they are independent. Example usage: \n\n
-        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]'''
+        """
+        Given two variables and evidence returns if it is garantued that they are independent. 
+        False means the variables are NOT garantued to independent. 
+        True means they are independent. 
+        
+        Example usage:
+        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
+        """
         for path in self.get_all_paths(var_1, var_2):
             active_path = True
             print("path", path)
