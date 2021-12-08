@@ -175,7 +175,7 @@ class BNReasoner:
         return True  # Indpendence garantued if no path active
 
     def get_number_of_edges(self, X: str):
-        int_graph = BN.get_interaction_graph()
+        int_graph = self.bn.get_interaction_graph()
         num_edges = len(int_graph[X])
         return num_edges
 
