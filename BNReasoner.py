@@ -340,61 +340,62 @@ class BNReasoner:
         return PD_new
 
 
-# test pruner
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-bn_grass.bn.draw_structure()
-pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
-pruned_bn_grass.bn.draw_structure()
-'''
+if __name__ == "__main__":
+    # test pruner
+    '''
+    bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+    bn_grass.bn.draw_structure()
+    pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
+    pruned_bn_grass.bn.draw_structure()
+    '''
 
-# test maxing-out
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-print(bn_grass.maxing_out(('Sprinkler?', 'Rain?')))
-'''
+    # test maxing-out
+    '''
+    bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+    print(bn_grass.maxing_out(('Sprinkler?', 'Rain?')))
+    '''
 
-# test summing-out
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
-'''
+    # test summing-out
+    '''
+    bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+    print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
+    '''
 
-# test get JPD
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-print(bn_grass.get_joint_probability_distribution())
-print(bn_grass.get_joint_probability_distribution().sum())
-'''
+    # test get JPD
+    '''
+    bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+    print(bn_grass.get_joint_probability_distribution())
+    print(bn_grass.get_joint_probability_distribution().sum())
+    '''
 
-# test 2 multiplying factors
-'''
-BN = BayesNet()
-BN.load_from_bifxml('testing/lecture_example.BIFXML')
-BR = BNReasoner(BN)
-cpt_1, cpt_2 = BN.get_cpt('Winter?'), BN.get_cpt('Sprinkler?')
-print(BR.multiply_cpts(cpt_1, cpt_2))
-'''
+    # test 2 multiplying factors
+    '''
+    BN = BayesNet()
+    BN.load_from_bifxml('testing/lecture_example.BIFXML')
+    BR = BNReasoner(BN)
+    cpt_1, cpt_2 = BN.get_cpt('Winter?'), BN.get_cpt('Sprinkler?')
+    print(BR.multiply_cpts(cpt_1, cpt_2))
+    '''
 
-# test multiplying factors
-'''
-BN = BNReasoner('testing/dog_problem.BIFXML')
-cpt_1 = BN.bn.get_cpt("hear-bark")
-cpt_2 = BN.bn.get_cpt("dog-out")
-print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
-factor_product = BN.multiply_cpts(cpt_1, cpt_2)
-print('factor_product:', factor_product) 
-'''
+        # test multiplying factors
+    '''
+    BN = BNReasoner('testing/dog_problem.BIFXML')
+    cpt_1 = BN.bn.get_cpt("hear-bark")
+    cpt_2 = BN.bn.get_cpt("dog-out")
+    print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
+    factor_product = BN.multiply_cpts(cpt_1, cpt_2)
+    print('factor_product:', factor_product) 
+    '''
 
-# test d-separation
-'''
-reasoner = BNReasoner('testing/dog_problem.BIFXML')
-BN = BayesNet()
-network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
-BN.draw_structure()
-test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
-print(test)
+    # test d-separation
+    '''
+    reasoner = BNReasoner('testing/dog_problem.BIFXML')
+    BN = BayesNet()
+    network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
+    BN.draw_structure()
+    test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
+    print(test)
 
-# test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
-# print(test)
-'''
+    # test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
+    # print(test)
+    '''
