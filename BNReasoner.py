@@ -349,6 +349,68 @@ class BNReasoner:
         return PD_new
 
 
+    def MPE(self, evidence: list, elimination_order) -> dict:
+        """
+        Returns the most probable explanation for the evidence
+        
+        Takes evidence as input and returns the most probable explanation for the evidence as an instantiation
+        """
+        evidence_vars = [var for (var, _) in evidence]
+
+        # prune network
+        pruned_network = self.pruner([], evidence_vars)
+        
+        # get al variables
+        vars = pruned_network.get_all_variables()
+        
+        # get elimination order
+        elimination_order = list(elimination_order(vars))
+
+        # condition all CPTs
+        cpts = [self.condition(cpt, evidence) for cpt in pruned_network.get_all_cpts().values()]
+        
+        for i in range(len(vars)):
+            var = elimination_order[i]
+            cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
+            product = cpts_with_var[0]
+            for cpt in cpts_with_var[1:]:
+                print('------------------')
+                print(product)
+                print('------------------')
+                print(cpt)
+                print('------------------')
+                product = self.multiply_cpts(product, cpt)
+            
+            # max over var
+            max = self.maxing_out(product)
+            
+            # replace factors in cpts with max
+            for i in range(len(cpts)):
+                if cpts[i] in cpts_with_var:
+                    cpts[i] = max
+
+            
+
+    def MAP(self, M: list, evidence: list):
+        """
+        Returns the 'most a posteriori estimate' for the given variables and evidence
+        """
+        # prune network
+        pruned_network = self.bn
+        
+        # get al variables
+        vars = [var for var in pruned_network.get_all_variables() if var not in M]
+        
+        # get elimination order
+        elimination_order = list(self.min_degree_ordening(vars)) + list(self.min_degree_ordening(M))
+        
+        # get all factors
+        factors = None
+
+        for i in range(len(vars)):
+            var = elimination_order[i]
+
+
 # test pruner
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
