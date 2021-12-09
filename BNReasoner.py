@@ -85,7 +85,7 @@ class BNReasoner:
         singular_vals += [cpt_2[col].iloc[0] for col in list(
             cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
-        # print(singular_cols, singular_vals)
+        print(singular_cols, singular_vals)
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
@@ -96,7 +96,8 @@ class BNReasoner:
         for i in range(len(new_cpt_cols)-1):
             # If this was a singular value column
             if new_cpt_cols[i] in singular_cols:
-                new_cpt.loc[:, list(new_cpt_cols)[i]] = singular_vals[i]
+                new_cpt.loc[:, list(new_cpt_cols)[
+                    i]] = singular_vals[singular_cols.index(new_cpt_cols[i])]
                 continue
             rows_to_fill_in = pow(2, len(new_cpt_cols)-2-i)
             cur_bool = False
