@@ -303,8 +303,10 @@ class BNReasoner:
 
 
 # test summing-out
+'''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
+'''
 
 # test get JPD
 '''
