@@ -6,6 +6,7 @@ from numpy import multiply
 from BayesNet import BayesNet
 import copy
 import pandas as pd
+import random
 pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
 
 
@@ -347,6 +348,24 @@ class BNReasoner:
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'max'})
 
         return PD_new
+
+
+    def random_ordening(self, vars: list) -> list:
+        """
+        Returns a shuffled list of variables
+        """
+        random.shuffle(vars)
+        return vars
+
+
+    def condition(self, cpt: pd.DataFrame, evidence: list):
+        """
+        Given a CPT and evidence, returns a conditioned CPT
+        """
+        for (var, value) in evidence:
+            if var in cpt.columns:
+                cpt = cpt.loc[cpt[var] == value]
+        return cpt
 
 
     def MPE(self, evidence: list, elimination_order) -> dict:
