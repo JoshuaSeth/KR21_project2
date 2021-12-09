@@ -151,23 +151,23 @@ class BNReasoner:
     def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
         # create copy of network to work on
-        network = copy.deepcopy(self)
+        network = copy.deepcopy(self.bn)
 
         # deleting leaf nodes
-        variables = network.bn.get_all_variables()
+        variables = network.get_all_variables()
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = network.bn.get_children([variable])
+                children = network.get_children([variable])
                 # ... and has no children, then delete it
                 if not children:
-                    network.bn.del_var(variable)
+                    network.del_var(variable)
 
         # deleting outgoing edges from E
         for evidence in E:
-            children = network.bn.get_children([evidence])
+            children = network.get_children([evidence])
             for child in children:
-                network.bn.del_edge((evidence, child))
+                network.del_edge((evidence, child))
 
         return network
 
