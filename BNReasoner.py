@@ -106,7 +106,7 @@ class BNReasoner:
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
         Q: list of variables for which you want a probability table.
-        E: list of variables that need to be marginalized out.
+        E: list of variables for which you want the marginalized distribution (opposite of marginalizing out).
 
         Example usage: 
         m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])
@@ -120,8 +120,7 @@ class BNReasoner:
             cpt = cpts[i]
             multiplied_cpt = self.multiply_cpts(multiplied_cpt, cpt)
 
-        print(multiplied_cpt)
-        # 2. marginalize out variables in E
+        # 2. marginalize out variables NOT in E
         for var in list(multiplied_cpt):
             if var not in E and var != "p":
                 multiplied_cpt.drop(var, 1, inplace=True)
