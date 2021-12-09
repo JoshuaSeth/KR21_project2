@@ -233,7 +233,7 @@ class BNReasoner:
         # delete columns of variables that need to be summed out
         JPD = JPD.drop(columns=list(sum_out_variables))
 
-        # sum up p values of remaining rows if the are similar
+        # sum up p values of remaining rows if they are similar
         remaining_columns = list(
             set(self.bn.get_all_variables()) - set(sum_out_variables))
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
@@ -301,6 +301,29 @@ class BNReasoner:
         min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
         print(min_fill_dict)
 
+    def maxing_out(self, max_out_variables):
+        '''Takes set of variables that needs to be maxed out as an input and 
+        returns joint probability distribution table with given variables 
+        eliminated when applied to a Bayesian Network''' 
+        # get full JPD
+        JPD = self.get_joint_probability_distribution()
+
+        # delete columns of variables that need to be maxed out
+        JPD = JPD.drop(columns=list(max_out_variables))
+
+        # take max p value for remaining rows if they are similar
+        remaining_columns = list(
+            set(self.bn.get_all_variables()) - set(max_out_variables))
+        PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'max'})
+    
+        return PD_new
+
+
+# test maxing-out
+'''
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+print(bn_grass.maxing_out(('Sprinkler?', 'Rain?')))
+'''
 
 # test summing-out
 '''
