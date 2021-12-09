@@ -55,6 +55,11 @@ class BNReasoner:
                             nodes_to_visit.append((parents, 'asc'))
         return True
 
+    def is_unique(self, s):
+        '''Quick check if all values in df are equal'''
+        a = s.to_numpy()  # s.values (pandas<0.24)
+        return (a[0] == a).all()
+
     def multiply_cpts(self, cpt_1, cpt_2):
         """
         Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
@@ -67,10 +72,19 @@ class BNReasoner:
         vars_to_add = [col for col in list(
             cpt_2) if col not in cpt_1_no_p]
 
+        # print(cpt_1)
+        # print(cpt_2)
+
+        # If columns consist of one single equal value the new cpt must be shorter
+        singular_cols = [col for col in list(
+            cpt_1_no_p) if self.is_unique(cpt_1[col])]
+        singular_cols += [col for col in list(
+            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col not in singular_cols]
+        singular_cols = len(singular_cols)
+        # print(singular_cols)
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
-        index_cols_of_first_cpt = len(cpt_1_no_p)
-        new_cpt_len = pow(2, len(new_cpt_cols)-1)
+        new_cpt_len = pow(2, len(new_cpt_cols)-1-singular_cols)
         new_cpt = pd.DataFrame(columns=new_cpt_cols,
                                index=range(new_cpt_len), dtype=object)
 
@@ -83,6 +97,8 @@ class BNReasoner:
                 cur_bool = not cur_bool
                 new_cpt[new_cpt_cols[i]][start_i:start_i +
                                          rows_to_fill_in] = cur_bool
+        # print("filling in vals")
+        # print(new_cpt)
 
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
         for index, row in new_cpt.iterrows():
@@ -97,6 +113,8 @@ class BNReasoner:
                 if col in list(cpt_2):
                     p_2 = p_2.loc[p_2[col] == row[index_1]]
                 index_1 += 1
+            # print(p_1)
+            # print(p_2)
             result = float(p_1["p"].item()) * float(p_2["p"].item())
             new_cpt["p"][index] = result
 
@@ -307,7 +325,7 @@ class BNReasoner:
     def maxing_out(self, max_out_variables):
         '''Takes set of variables that needs to be maxed out as an input and 
         returns joint probability distribution table with given variables 
-        eliminated when applied to a Bayesian Network''' 
+        eliminated when applied to a Bayesian Network'''
         # get full JPD
         JPD = self.get_joint_probability_distribution()
 
@@ -318,8 +336,9 @@ class BNReasoner:
         remaining_columns = list(
             set(self.bn.get_all_variables()) - set(max_out_variables))
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'max'})
-    
+
         return PD_new
+
 
 # test pruner
 '''
