@@ -120,12 +120,14 @@ class BNReasoner:
             cpt = cpts[i]
             multiplied_cpt = self.multiply_cpts(multiplied_cpt, cpt)
 
+        print(multiplied_cpt)
         # 2. marginalize out variables in E
-        for var in E:
-            multiplied_cpt.drop(var, 1, inplace=True)
-        # Sum up p for rows that are the same
-        multiplied_cpt = multiplied_cpt.groupby(
-            list(multiplied_cpt)[:-1]).sum().reset_index()
+        for var in list(multiplied_cpt):
+            if var not in E and var != "p":
+                multiplied_cpt.drop(var, 1, inplace=True)
+            # Sum up p for rows that are the same
+            multiplied_cpt = multiplied_cpt.groupby(
+                list(multiplied_cpt)[:-1]).sum().reset_index()
 
         return multiplied_cpt
 

@@ -13,4 +13,4 @@ BR = BNReasoner(BN)
 
 var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
 
-print(BR.d_separation_alt(var_1, var_2, evidence))
+print(BR.get_marginal_distribution(["dog-out"], ["family-out"]))
