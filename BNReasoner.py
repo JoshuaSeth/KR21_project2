@@ -260,8 +260,8 @@ class BNReasoner:
         # was double list brackets, might be a problem later if multiple triangles?
         return all_triangles[0]
 
-    # gets all nodes with a single edge in a given interaction network
     def nodes_with_1_edge(self, network):
+        '''Gets all nodes with a single edge in a given interaction network'''
         single_connection_node = []
         for i in BN.get_all_variables():
             all_linked_nodes = network[i]
