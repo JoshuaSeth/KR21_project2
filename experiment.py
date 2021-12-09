@@ -34,3 +34,5 @@ for iteration in range(1, size_growth_iterations+1):
                 BR.mpe()
             time = time.time() - start_time  # How much time did it take
             result[heuristic + query][iteration] = time
+
+result.to_csv("experiment_results.csv")
