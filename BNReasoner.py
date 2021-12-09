@@ -132,23 +132,26 @@ class BNReasoner:
 
     def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
+        # create copy of network to work on
+        network = copy.deepcopy(self)
+
         # deleting leaf nodes
-        variables = self.bn.get_all_variables()
+        variables = network.bn.get_all_variables()
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = self.bn.get_children([variable])
+                children = network.bn.get_children([variable])
                 # ... and has no children, then delete it
                 if not children:
-                    self.bn.del_var(variable)
+                    network.bn.del_var(variable)
 
         # deleting outgoing edges from E
         for evidence in E:
-            children = self.bn.get_children([evidence])
+            children = network.bn.get_children([evidence])
             for child in children:
-                self.bn.del_edge((evidence, child))
+                network.bn.del_edge((evidence, child))
 
-        return self.bn
+        return network
 
     def get_all_paths(self, start_node, end_node):
         """
@@ -318,6 +321,13 @@ class BNReasoner:
     
         return PD_new
 
+# test pruner
+'''
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+bn_grass.bn.draw_structure()
+pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
+pruned_bn_grass.bn.draw_structure()
+'''
 
 # test maxing-out
 '''
@@ -355,14 +365,6 @@ cpt_2 = BN.bn.get_cpt("dog-out")
 print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
 factor_product = BN.multiply_cpts(cpt_1, cpt_2)
 print('factor_product:', factor_product) 
-'''
-
-# test pruner
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-bn_grass.bn.draw_structure()
-bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
-bn_grass.bn.draw_structure()
 '''
 
 # test d-separation
