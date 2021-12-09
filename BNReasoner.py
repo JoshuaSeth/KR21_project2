@@ -1,3 +1,4 @@
+import networkx as nx
 from typing import Union
 from xml.etree.ElementTree import TreeBuilder
 
@@ -6,7 +7,7 @@ from BayesNet import BayesNet
 import copy
 import pandas as pd
 pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
-import networkx as nx
+
 
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
@@ -130,15 +131,15 @@ class BNReasoner:
 
     def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
-        # deleting leaf nodes 
+        # deleting leaf nodes
         variables = self.bn.get_all_variables()
-        for variable in variables: 
+        for variable in variables:
             # if variable is not part of the selected variables ...
-            if variable not in Q and variable not in E: 
+            if variable not in Q and variable not in E:
                 children = self.bn.get_children([variable])
-                # ... and has no children, then delete it 
+                # ... and has no children, then delete it
                 if not children:
-                    self.bn.del_var(variable) 
+                    self.bn.del_var(variable)
 
         # deleting outgoing edges from E
         for evidence in E:
@@ -147,7 +148,7 @@ class BNReasoner:
                 self.bn.del_edge((evidence, child))
 
         return self.bn
-    
+
     def get_all_paths(self, start_node, end_node):
         """
         Returns all paths between nodes
@@ -215,10 +216,10 @@ class BNReasoner:
         final_table = self.bn.get_cpt(all_variables[0])
 
         # multiplies all CPT to get a JPD
-        for i in range(1,len(all_variables)):
+        for i in range(1, len(all_variables)):
             table_i = self.bn.get_cpt(all_variables[i])
             final_table = self.multiply_cpts(final_table, table_i)
-        
+
         return final_table
 
     def summing_out(self, sum_out_variables):
@@ -231,18 +232,22 @@ class BNReasoner:
         # delete columns of variables that need to be summed out
         JPD = JPD.drop(columns=list(sum_out_variables))
 
-        # sum up p values of remaining rows if the are similar 
-        remaining_columns = list(set(self.bn.get_all_variables()) - set(sum_out_variables))
+        # sum up p values of remaining rows if the are similar
+        remaining_columns = list(
+            set(self.bn.get_all_variables()) - set(sum_out_variables))
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
 
         return PD_new
+
     def min_degree_ordening(self, X: list) -> dict:
-        all_degrees  = []
+        all_degrees = []
         all_degrees = [self.number_of_edges(e) for e in X]
-        dict_of_degrees = dict(zip(X, all_degrees)) # unsorted
-        dict_of_degrees_sorted = dict(sorted(dict_of_degrees.items(), key = lambda item: item[1])) # lowest values first, for easy of use, can chance to list
+        dict_of_degrees = dict(zip(X, all_degrees))  # unsorted
+        # lowest values first, for easy of use, can chance to list
+        dict_of_degrees_sorted = dict(
+            sorted(dict_of_degrees.items(), key=lambda item: item[1]))
         return dict_of_degrees_sorted
-    
+
     def number_of_edges(self, X: str) -> int:
         length = len(int_graph[X])
         return length
@@ -251,9 +256,11 @@ class BNReasoner:
     def get_all_triangles(self, network):
         all_linked_nodes = list(nx.enumerate_all_cliques(network))
         all_triangles = [c for c in all_linked_nodes if len(c) == 3]
-        return all_triangles[0] # was double list brackets, might be a problem later if multiple triangles?
+        # was double list brackets, might be a problem later if multiple triangles?
+        return all_triangles[0]
 
-    def nodes_with_1_edge(self, network): # gets all nodes with a single edge in a given interaction network
+    # gets all nodes with a single edge in a given interaction network
+    def nodes_with_1_edge(self, network):
         single_connection_node = []
         for i in BN.get_all_variables():
             all_linked_nodes = network[i]
@@ -264,7 +271,8 @@ class BNReasoner:
     def get_only_triangle_node(self, int_graph, all_nodes: list) -> str:
         for elements in all_nodes:
             connections = list(int_graph[elements])
-            lst_check = all(elem in all_nodes for elem in connections) # checking which connections are only within the triangle
+            # checking which connections are only within the triangle
+            lst_check = all(elem in all_nodes for elem in connections)
             if lst_check == True:
                 var_to_remove = elements
         return var_to_remove
@@ -278,10 +286,14 @@ class BNReasoner:
         another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
         '''
         nodes_with_value_0 = []
-        all_triangles = self.get_all_triangles(network) # get all triangles
-        triangle_node_to_remove = self.get_only_triangle_node(network, all_triangles) # get all nodes from triangles which can be deleted without adding edge
-        nodes_with_value_0.append(triangle_node_to_remove) # add triangle nodes to value 0 list
-        single_edge_nodes = self.nodes_with_1_edge(network) # get all single edge nodes
+        all_triangles = self.get_all_triangles(network)  # get all triangles
+        # get all nodes from triangles which can be deleted without adding edge
+        triangle_node_to_remove = self.get_only_triangle_node(
+            network, all_triangles)
+        # add triangle nodes to value 0 list
+        nodes_with_value_0.append(triangle_node_to_remove)
+        single_edge_nodes = self.nodes_with_1_edge(
+            network)  # get all single edge nodes
         for elements in single_edge_nodes:
             nodes_with_value_0.append(elements)
         lst_0 = [0] * len(nodes_with_value_0)
@@ -291,9 +303,9 @@ class BNReasoner:
 
 # test summing-out
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?','Rain?')))
+print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
 
-# test get JPD 
+# test get JPD
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.get_joint_probability_distribution())
