@@ -13,11 +13,18 @@ BR = BNReasoner(BN)
 
 var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
 
+
 cpt_1 = BR.bn.get_cpt("Winter?")
 cpt_2 = BR.bn.get_cpt("Sprinkler?")
+cpt_3 = BR.bn.get_cpt("Wet Grass?")
 cpt_1 = cpt_1.drop([0])
 cpt_2 = cpt_2.drop([0, 1])
+cpt_3 = cpt_3.drop([0, 1, 2, 3])
 
+print(cpt_1)
+# print(cpt_2)
+# print(cpt_3)
 
-cpt_3 = BR.multiply_cpts(cpt_1, cpt_2)
+cpt_3 = BR.multiply_cpts(cpt_1, cpt_1)
+print("result")
 print(cpt_3)

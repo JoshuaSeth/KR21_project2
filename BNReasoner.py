@@ -72,24 +72,32 @@ class BNReasoner:
         vars_to_add = [col for col in list(
             cpt_2) if col not in cpt_1_no_p]
 
-        # print(cpt_1)
-        # print(cpt_2)
-
         # If columns consist of one single equal value the new cpt must be shorter
         singular_cols = [col for col in list(
-            cpt_1_no_p) if self.is_unique(cpt_1[col])]
+            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
         singular_cols += [col for col in list(
-            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col not in singular_cols]
-        singular_cols = len(singular_cols)
-        # print(singular_cols)
+            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col not in singular_cols and col != 'p']
+        discount = len(singular_cols)
+
+        # Remebr the only value these cols had: False or True
+        singular_vals = [cpt_1[col].iloc[0] for col in list(
+            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
+        singular_vals += [cpt_2[col].iloc[0] for col in list(
+            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
+
+        # print(singular_cols, singular_vals)
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
-        new_cpt_len = pow(2, len(new_cpt_cols)-1-singular_cols)
+        new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
         new_cpt = pd.DataFrame(columns=new_cpt_cols,
                                index=range(new_cpt_len), dtype=object)
 
         # 3. Fill in CPT with Trues and falses
         for i in range(len(new_cpt_cols)-1):
+            # If this was a singular value column
+            if new_cpt_cols[i] in singular_cols:
+                new_cpt.loc[:, list(new_cpt_cols)[i]] = singular_vals[i]
+                continue
             rows_to_fill_in = pow(2, len(new_cpt_cols)-2-i)
             cur_bool = False
             for j in range(int(new_cpt_len/rows_to_fill_in)):
@@ -102,7 +110,7 @@ class BNReasoner:
 
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
         for index, row in new_cpt.iterrows():
-            cols = list(new_cpt)[:-1]
+            cols = list(new_cpt)[: -1]
             p_1 = copy.deepcopy(cpt_1)
             p_2 = copy.deepcopy(cpt_2)
 
@@ -126,8 +134,9 @@ class BNReasoner:
         Q: list of variables for which you want a probability table.
         E: list of variables for which you want the marginalized distribution (opposite of marginalizing out).
 
-        Example usage: 
-        m = BR.get_marginal_distribution(["hear-bark", "dog-out"], ["family-out"])
+        Example usage:
+        m = BR.get_marginal_distribution(
+            ["hear-bark", "dog-out"], ["family-out"])
         """
         # 1. multiply CPTs for different variables in Q to 1 big CPT
         # Get cpts for vars
@@ -212,8 +221,8 @@ class BNReasoner:
 
     def d_separation_alt(self, var_1, var_2, evidence):
         """
-        Given two variables and evidence returns if it is garantued that they are independent. 
-        False means the variables are NOT garantued to independent. True means they are independent. 
+        Given two variables and evidence returns if it is garantued that they are independent.
+        False means the variables are NOT garantued to independent. True means they are independent.
 
         Example usage:
         var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
@@ -232,7 +241,7 @@ class BNReasoner:
         return True  # Indpendence garantued if no path active
 
     def get_joint_probability_distribution(self):
-        '''Returns full joint probability distribution table when applied to a 
+        '''Returns full joint probability distribution table when applied to a
         Bayesian Network'''
         all_variables = self.bn.get_all_variables()
         final_table = self.bn.get_cpt(all_variables[0])
@@ -245,8 +254,8 @@ class BNReasoner:
         return final_table
 
     def summing_out(self, sum_out_variables):
-        '''Takes set of variables that needs to be summed out as an input and 
-        returns joint probability distribution table with given variables 
+        '''Takes set of variables that needs to be summed out as an input and
+        returns joint probability distribution table with given variables
         eliminated when applied to a Bayesian Network'''
         # get full JPD
         JPD = self.get_joint_probability_distribution()
@@ -301,8 +310,8 @@ class BNReasoner:
 
     def min_fill_ordening(self, network) -> dict:
         '''
-        current idea to check the interaction graph for triangles, 
-        because we know that if there is a triangle, 
+        current idea to check the interaction graph for triangles,
+        because we know that if there is a triangle,
         we can remove the node which only has connections to other nodes within this triangle.
 
         another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
@@ -323,8 +332,8 @@ class BNReasoner:
         print(min_fill_dict)
 
     def maxing_out(self, max_out_variables):
-        '''Takes set of variables that needs to be maxed out as an input and 
-        returns joint probability distribution table with given variables 
+        '''Takes set of variables that needs to be maxed out as an input and
+        returns joint probability distribution table with given variables
         eliminated when applied to a Bayesian Network'''
         # get full JPD
         JPD = self.get_joint_probability_distribution()
@@ -383,7 +392,7 @@ cpt_1 = BN.bn.get_cpt("hear-bark")
 cpt_2 = BN.bn.get_cpt("dog-out")
 print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
 factor_product = BN.multiply_cpts(cpt_1, cpt_2)
-print('factor_product:', factor_product) 
+print('factor_product:', factor_product)
 '''
 
 # test d-separation
