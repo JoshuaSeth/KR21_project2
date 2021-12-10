@@ -282,56 +282,20 @@ class BNReasoner:
         return dict_of_degrees_sorted
 
     def number_of_edges(self, X: str) -> int:
+        int_graph = BN.get_interaction_graph()
         length = len(int_graph[X])
         return length
-        # wrote this but.. can use network.number_of_edges(u, v) where u and v are nodes to count between, empty input = all edges
 
-    def get_all_triangles(self, network):
-        all_linked_nodes = list(nx.enumerate_all_cliques(network))
-        all_triangles = [c for c in all_linked_nodes if len(c) == 3]
-        # was double list brackets, might be a problem later if multiple triangles?
-        return all_triangles[0]
-
-    def nodes_with_1_edge(self, network):
-        '''Gets all nodes with a single edge in a given interaction network'''
-        single_connection_node = []
-        for i in BN.get_all_variables():
-            all_linked_nodes = network[i]
-            if len(all_linked_nodes) == 1:
-                single_connection_node.append(i)
-        return single_connection_node
-
-    def get_only_triangle_node(self, int_graph, all_nodes: list) -> str:
-        for elements in all_nodes:
-            connections = list(int_graph[elements])
-            # checking which connections are only within the triangle
-            lst_check = all(elem in all_nodes for elem in connections)
-            if lst_check == True:
-                var_to_remove = elements
-        return var_to_remove
-
-    def min_fill_ordening(self, network) -> dict:
-        '''
-        current idea to check the interaction graph for triangles,
-        because we know that if there is a triangle,
-        we can remove the node which only has connections to other nodes within this triangle.
-
-        another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
-        '''
-        nodes_with_value_0 = []
-        all_triangles = self.get_all_triangles(network)  # get all triangles
-        # get all nodes from triangles which can be deleted without adding edge
-        triangle_node_to_remove = self.get_only_triangle_node(
-            network, all_triangles)
-        # add triangle nodes to value 0 list
-        nodes_with_value_0.append(triangle_node_to_remove)
-        single_edge_nodes = self.nodes_with_1_edge(
-            network)  # get all single edge nodes
-        for elements in single_edge_nodes:
-            nodes_with_value_0.append(elements)
-        lst_0 = [0] * len(nodes_with_value_0)
-        min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
-        print(min_fill_dict)
+    def min_fill_ordering(self, X:list[str]) -> list:
+        int_graph = BN.get_interaction_graph()
+        num_edges = []
+        for x in X:
+            all_neighbors = list(int_graph.neighbors(x))
+            all_combinations_of_neighbors = list(itertools.combinations(all_neighbors, r = 2)) # might need to change r if large number of connections?
+            new_edges = [i for i in all_combinations_of_neighbors if i not in int_graph.edges]
+            number_of_new_edges = len(new_edges)
+            num_edges.append(number_of_new_edges)
+        return list(zip(X, num_edges)) # change list to dict if necessary
 
     def maxing_out(self, max_out_variables):
         '''Takes set of variables that needs to be maxed out as an input and
