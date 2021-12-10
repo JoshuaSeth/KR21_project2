@@ -295,7 +295,7 @@ class BNReasoner:
             new_edges = [i for i in all_combinations_of_neighbors if i not in int_graph.edges]
             number_of_new_edges = len(new_edges)
             num_edges.append(number_of_new_edges)
-        return list(zip(X, num_edges)) # change list to dict if necessary
+        return dict(zip(X, num_edges)) # change to list/dict if necessary
 
     def maxing_out(self, max_out_variables):
         '''Takes set of variables that needs to be maxed out as an input and
