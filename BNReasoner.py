@@ -394,11 +394,6 @@ class BNReasoner:
             cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
             product = cpts_with_var[0]
             for cpt in cpts_with_var[1:]:
-                print('------------------')
-                print(product)
-                print('------------------')
-                print(cpt)
-                print('------------------')
                 product = self.multiply_cpts(product, cpt)
             
             # max over var
@@ -408,27 +403,45 @@ class BNReasoner:
             for i in range(len(cpts)):
                 if cpts[i] in cpts_with_var:
                     cpts[i] = max
+        
+        return cpts 
 
             
 
-    def MAP(self, M: list, evidence: list):
+    def MAP(self, M: list, evidence: list, elimination_order):
         """
         Returns the 'most a posteriori estimate' for the given variables and evidence
         """
         # prune network
-        pruned_network = self.bn
+        pruned_network = self.pruner(M, evidence)
         
         # get al variables
         vars = [var for var in pruned_network.get_all_variables() if var not in M]
         
         # get elimination order
-        elimination_order = list(self.min_degree_ordening(vars)) + list(self.min_degree_ordening(M))
+        elimination_order = list(elimination_order(vars)) + list(elimination_order(M))
         
         # get all factors
-        factors = None
+        cpts = [self.condition(cpt, evidence) for cpt in pruned_network.get_all_cpts().values()]
 
         for i in range(len(vars)):
+            # calc product over relevant factors
             var = elimination_order[i]
+            cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
+            product = cpts_with_var[0]
+            for cpt in cpts_with_var[1:]:
+                product = self.multiply_cpts(product, cpt)
+            
+            # replace relevant factors with max or sum
+            if var in M:
+                factor = self.maxing_out(product)
+            else:
+                factor = self.summing_out(product)
+            for i in range(len(cpts)):
+                if cpts[i] in cpts_with_var:
+                    cpts[i] = factor
+
+        return cpts
 
 
 # test pruner
@@ -548,3 +561,9 @@ if __name__ == "__main__":
     # test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
     # print(test)
     '''
+
+    # test MPE
+    bn = BayesNet()
+    bn.load_from_bifxml('testing/lecture_example.BIFXML')
+    bnr = BNReasoner(bn)
+    bnr.MPE([('Winter?', True), ('Wet Grass?', True)], bnr.random_ordening)
