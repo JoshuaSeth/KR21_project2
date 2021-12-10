@@ -25,6 +25,6 @@ cpt_3 = cpt_3.drop([1, 3, 5, 7])
 print(cpt_2)
 print(cpt_3)
 
-cpt_3 = BR.multiply_cpts(cpt_2, cpt_3)
+cpt_3 = BR.multiply_cpts(cpt_1, cpt_1)
 print("result")
 print(cpt_3)
