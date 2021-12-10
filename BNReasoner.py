@@ -58,6 +58,8 @@ class BNReasoner:
 
     def is_unique(self, s):
         '''Quick check if all values in df are equal'''
+        if not isinstance(s, pd.DataFrame):
+            s.to_frame()  # If we got a series object transform it to DF
         a = s.to_numpy()  # s.values (pandas<0.24)
         return (a[0] == a).all()
 
@@ -68,6 +70,12 @@ class BNReasoner:
         cpt_2 = BN.get_cpt("dog-out")
         factor_product = BR.multiply_cpts(cpt_1, cpt_2)
         """
+        # 0. Convert to df's if necessary
+        if not isinstance(cpt_1, pd.DataFrame):
+            cpt_1.to_frame()
+        if not isinstance(cpt_2, pd.DataFrame):
+            cpt_2.to_frame()
+
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
         vars_to_add = [col for col in list(
@@ -303,56 +311,23 @@ class BNReasoner:
         return dict_of_degrees_sorted
 
     def number_of_edges(self, X: str) -> int:
+        int_graph = BN.get_interaction_graph()
         length = len(int_graph[X])
         return length
-        # wrote this but.. can use network.number_of_edges(u, v) where u and v are nodes to count between, empty input = all edges
 
-    def get_all_triangles(self, network):
-        all_linked_nodes = list(nx.enumerate_all_cliques(network))
-        all_triangles = [c for c in all_linked_nodes if len(c) == 3]
-        # was double list brackets, might be a problem later if multiple triangles?
-        return all_triangles[0]
-
-    def nodes_with_1_edge(self, network):
-        '''Gets all nodes with a single edge in a given interaction network'''
-        single_connection_node = []
-        for i in BN.get_all_variables():
-            all_linked_nodes = network[i]
-            if len(all_linked_nodes) == 1:
-                single_connection_node.append(i)
-        return single_connection_node
-
-    def get_only_triangle_node(self, int_graph, all_nodes: list) -> str:
-        for elements in all_nodes:
-            connections = list(int_graph[elements])
-            # checking which connections are only within the triangle
-            lst_check = all(elem in all_nodes for elem in connections)
-            if lst_check == True:
-                var_to_remove = elements
-        return var_to_remove
-
-    def min_fill_ordening(self, network) -> dict:
-        '''
-        current idea to check the interaction graph for triangles,
-        because we know that if there is a triangle,
-        we can remove the node which only has connections to other nodes within this triangle.
-
-        another 'free' deletion is the deletion of nodes which have only 1 connection, because deleting them never causes an added edge.
-        '''
-        nodes_with_value_0 = []
-        all_triangles = self.get_all_triangles(network)  # get all triangles
-        # get all nodes from triangles which can be deleted without adding edge
-        triangle_node_to_remove = self.get_only_triangle_node(
-            network, all_triangles)
-        # add triangle nodes to value 0 list
-        nodes_with_value_0.append(triangle_node_to_remove)
-        single_edge_nodes = self.nodes_with_1_edge(
-            network)  # get all single edge nodes
-        for elements in single_edge_nodes:
-            nodes_with_value_0.append(elements)
-        lst_0 = [0] * len(nodes_with_value_0)
-        min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
-        print(min_fill_dict)
+    def min_fill_ordering(self, X: list[str]) -> list:
+        int_graph = BN.get_interaction_graph()
+        num_edges = []
+        for x in X:
+            all_neighbors = list(int_graph.neighbors(x))
+            # might need to change r if large number of connections?
+            all_combinations_of_neighbors = list(
+                itertools.combinations(all_neighbors, r=2))
+            new_edges = [
+                i for i in all_combinations_of_neighbors if i not in int_graph.edges]
+            number_of_new_edges = len(new_edges)
+            num_edges.append(number_of_new_edges)
+        return dict(zip(X, num_edges))  # change to list/dict if necessary
 
     def JPD_and_maxing_out(self, max_out_variables):
         '''Takes set of variables that needs to be maxed out as an input and
@@ -390,39 +365,40 @@ class BNReasoner:
     def MPE(self, evidence: list, elimination_order) -> dict:
         """
         Returns the most probable explanation for the evidence
-        
+
         Takes evidence as input and returns the most probable explanation for the evidence as an instantiation
         """
         evidence_vars = [var for (var, _) in evidence]
 
         # prune network
         pruned_network = self.pruner([], evidence_vars)
-        
+
         # get al variables
         vars = pruned_network.get_all_variables()
-        
+
         # get elimination order
         elimination_order = list(elimination_order(vars))
 
         # condition all CPTs
-        cpts = [self.condition(cpt, evidence) for cpt in pruned_network.get_all_cpts().values()]
-        
+        cpts = [self.condition(cpt, evidence)
+                for cpt in pruned_network.get_all_cpts().values()]
+
         for i in range(len(vars)):
             var = elimination_order[i]
             cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
             product = cpts_with_var[0]
             for cpt in cpts_with_var[1:]:
                 product = self.multiply_cpts(product, cpt)
-            
+
             # max over var
             max = self.maxing_out(product)
-            
+
             # replace factors in cpts with max
             for i in range(len(cpts)):
                 if cpts[i] in cpts_with_var:
                     cpts[i] = max
-        
-        return cpts        
+
+        return cpts
 
     def MAP(self, M: list, evidence: list, elimination_order):
         """
@@ -430,15 +406,18 @@ class BNReasoner:
         """
         # prune network
         pruned_network = self.pruner(M, evidence)
-        
+
         # get al variables
-        vars = [var for var in pruned_network.get_all_variables() if var not in M]
-        
+        vars = [var for var in pruned_network.get_all_variables()
+                if var not in M]
+
         # get elimination order
-        elimination_order = list(elimination_order(vars)) + list(elimination_order(M))
-        
+        elimination_order = list(elimination_order(
+            vars)) + list(elimination_order(M))
+
         # get all factors
-        cpts = [self.condition(cpt, evidence) for cpt in pruned_network.get_all_cpts().values()]
+        cpts = [self.condition(cpt, evidence)
+                for cpt in pruned_network.get_all_cpts().values()]
 
         for i in range(len(vars)):
             # calc product over relevant factors
@@ -447,7 +426,7 @@ class BNReasoner:
             product = cpts_with_var[0]
             for cpt in cpts_with_var[1:]:
                 product = self.multiply_cpts(product, cpt)
-            
+
             # replace relevant factors with max or sum
             if var in M:
                 factor = self.maxing_out(product)
