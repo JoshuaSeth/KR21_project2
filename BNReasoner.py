@@ -246,16 +246,21 @@ class BNReasoner:
         '''Returns full joint probability distribution table when applied to a
         Bayesian Network'''
         all_variables = self.bn.get_all_variables()
+        print(all_variables)
         final_table = self.bn.get_cpt(all_variables[0])
+        print(final_table)
 
+        
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
             table_i = self.bn.get_cpt(all_variables[i])
+            print(table_i)
+            
             final_table = self.multiply_cpts(final_table, table_i)
-
+        
         return final_table
 
-    def summing_out(self, sum_out_variables):
+    def JPD_and_summing_out(self, sum_out_variables):
         '''Takes set of variables that needs to be summed out as an input and
         returns joint probability distribution table with given variables
         eliminated when applied to a Bayesian Network'''
@@ -269,6 +274,22 @@ class BNReasoner:
         remaining_columns = list(
             set(self.bn.get_all_variables()) - set(sum_out_variables))
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
+
+        return PD_new
+
+    def summing_out(self, cpt, sum_out_variables):
+        '''Takes set of variables (given als list of strings) that needs to be 
+        summed out as an input and returns table with without given variables 
+        when applied to a Bayesian Network'''
+
+        # delete columns of variables that need to be summed out
+        cpt = cpt.drop(columns=sum_out_variables)
+
+        # get the variables still present in the table 
+        remaining_variables = list(cpt.columns.values)[:-1]
+
+        # sum up p values if rows are similar 
+        PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'sum'})
 
         return PD_new
 
@@ -333,7 +354,7 @@ class BNReasoner:
         min_fill_dict = dict(zip(nodes_with_value_0, lst_0))
         print(min_fill_dict)
 
-    def maxing_out(self, max_out_variables):
+    def JPD_and_maxing_out(self, max_out_variables):
         '''Takes set of variables that needs to be maxed out as an input and
         returns joint probability distribution table with given variables
         eliminated when applied to a Bayesian Network'''
@@ -350,14 +371,12 @@ class BNReasoner:
 
         return PD_new
 
-
     def random_ordening(self, vars: list) -> list:
         """
         Returns a shuffled list of variables
         """
         random.shuffle(vars)
         return vars
-
 
     def condition(self, cpt: pd.DataFrame, evidence: list):
         """
@@ -367,7 +386,6 @@ class BNReasoner:
             if var in cpt.columns:
                 cpt = cpt.loc[cpt[var] == value]
         return cpt
-
 
     def MPE(self, evidence: list, elimination_order) -> dict:
         """
@@ -404,9 +422,7 @@ class BNReasoner:
                 if cpts[i] in cpts_with_var:
                     cpts[i] = max
         
-        return cpts 
-
-            
+        return cpts        
 
     def MAP(self, M: list, evidence: list, elimination_order):
         """
@@ -443,6 +459,13 @@ class BNReasoner:
 
         return cpts
 
+# test summing out 
+'''
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
+print(example_cpt)
+bn_grass.summing_out(example_cpt, ['Wet Grass?'])
+'''
 
 # test pruner
 '''
@@ -452,24 +475,24 @@ pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
 pruned_bn_grass.bn.draw_structure()
 '''
 
-# test maxing-out
+# test JPD^maxing-out
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.maxing_out(('Sprinkler?', 'Rain?')))
 '''
 
-# test summing-out
+# test JPD^summing-out
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
 '''
 
 # test get JPD
-'''
+
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.get_joint_probability_distribution())
 print(bn_grass.get_joint_probability_distribution().sum())
-'''
+
 
 # test 2 multiplying factors
 '''
@@ -563,7 +586,9 @@ if __name__ == "__main__":
     '''
 
     # test MPE
+    """
     bn = BayesNet()
     bn.load_from_bifxml('testing/lecture_example.BIFXML')
     bnr = BNReasoner(bn)
     bnr.MPE([('Winter?', True), ('Wet Grass?', True)], bnr.random_ordening)
+    """
