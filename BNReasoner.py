@@ -315,7 +315,8 @@ class BNReasoner:
         length = len(int_graph[X])
         return length
 
-    def min_fill_ordering(self, X: list[str]) -> list:
+    def min_fill_ordering(self, X: list) -> list:
+        '''Input list of strings'''
         int_graph = BN.get_interaction_graph()
         num_edges = []
         for x in X:
@@ -344,6 +345,21 @@ class BNReasoner:
             set(self.bn.get_all_variables()) - set(max_out_variables))
         PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'max'})
 
+        return PD_new
+
+    def maxing_out(self, cpt, max_out_variables):
+        '''Takes set of variables (given als list of strings) that needs to be 
+        maxed out as an input and returns table with without given variables 
+        when applied to a Bayesian Network'''
+        # delete columns of variables that need to be maxed out
+        cpt = cpt.drop(columns=max_out_variables)
+
+        # get the variables still present in the table 
+        remaining_variables = list(cpt.columns.values)[:-1]
+
+        # take max p value for remaining rows if they are similar
+        PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
+        print(PD_new)
         return PD_new
 
     def random_ordening(self, vars: list) -> list:
@@ -438,6 +454,15 @@ class BNReasoner:
 
         return cpts
 
+
+# test maxing out 
+'''
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
+print(example_cpt)
+bn_grass.maxing_out(example_cpt, ['Wet Grass?'])
+'''
+
 # test summing out 
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
@@ -467,11 +492,11 @@ print(bn_grass.summing_out(('Slippery Road?', 'Sprinkler?', 'Rain?')))
 '''
 
 # test get JPD
-
+'''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 print(bn_grass.get_joint_probability_distribution())
 print(bn_grass.get_joint_probability_distribution().sum())
-
+'''
 
 # test 2 multiplying factors
 '''
