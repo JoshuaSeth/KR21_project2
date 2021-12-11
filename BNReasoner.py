@@ -138,6 +138,9 @@ class BNReasoner:
 
         return new_cpt
 
+    # NOTE: This must become boh a-priori and a-posteriori, currently it is a-posteriori
+    # Posterioi is after evidence given, priori is distribution of single variable without evidence
+    # I think I also need to integrate the whole multiplication chain i.e. Right now it just multiplies A and B when those ar ein Q but it needs to multiply the whole chain from the start until arriving at the variable for which we want the marginal distirbution. For example sometimes to get to C you have to do A x B|A x C|B before you arrive at the correct marginal distirbution. Right now this is just B|A x C|B. See video PGM 3 35:52
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
@@ -258,14 +261,13 @@ class BNReasoner:
         final_table = self.bn.get_cpt(all_variables[0])
         print(final_table)
 
-        
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
             table_i = self.bn.get_cpt(all_variables[i])
             print(table_i)
-            
+
             final_table = self.multiply_cpts(final_table, table_i)
-        
+
         return final_table
 
     def JPD_and_summing_out(self, sum_out_variables):
@@ -293,10 +295,10 @@ class BNReasoner:
         # delete columns of variables that need to be summed out
         cpt = cpt.drop(columns=sum_out_variables)
 
-        # get the variables still present in the table 
+        # get the variables still present in the table
         remaining_variables = list(cpt.columns.values)[:-1]
 
-        # sum up p values if rows are similar 
+        # sum up p values if rows are similar
         PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'sum'})
 
         return PD_new
@@ -354,7 +356,7 @@ class BNReasoner:
         # delete columns of variables that need to be maxed out
         cpt = cpt.drop(columns=max_out_variables)
 
-        # get the variables still present in the table 
+        # get the variables still present in the table
         remaining_variables = list(cpt.columns.values)[:-1]
 
         # take max p value for remaining rows if they are similar
@@ -455,7 +457,7 @@ class BNReasoner:
         return cpts
 
 
-# test maxing out 
+# test maxing out
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
@@ -463,7 +465,7 @@ print(example_cpt)
 bn_grass.maxing_out(example_cpt, ['Wet Grass?'])
 '''
 
-# test summing out 
+# test summing out
 '''
 bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
