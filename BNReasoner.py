@@ -141,6 +141,8 @@ class BNReasoner:
     # NOTE: This must become boh a-priori and a-posteriori, currently it is a-posteriori
     # Posterioi is after evidence given, priori is distribution of single variable without evidence
     # I think I also need to integrate the whole multiplication chain i.e. Right now it just multiplies A and B when those ar ein Q but it needs to multiply the whole chain from the start until arriving at the variable for which we want the marginal distirbution. For example sometimes to get to C you have to do A x B|A x C|B before you arrive at the correct marginal distirbution. Right now this is just B|A x C|B. See video PGM 3 35:52 and 1:20:30
+    # Variable must change Q is variables for which we want marginal distribution E is evidence
+    # Currently it just multiplies tables and Q and marginalizes until ending up with E
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
@@ -151,6 +153,21 @@ class BNReasoner:
         m = BR.get_marginal_distribution(
             ["hear-bark", "dog-out"], ["family-out"])
         """
+        # Alt Get vars in Q and multiply and sum out their chain
+        for var in Q:
+            # get ancestors
+            ancestors = nx.ancestors(self.bn.structure, self.bn.get_cpt([var]))
+            for ancestor in ancestors:
+                # sum it with the next ancestor (child)
+                # either sum out the ancestor (merge rows)
+                # or if in evidence just choose the relevant rows
+                # until arriving at the var in Q
+                pass
+            # Then multiply those two final resulting vars in Q
+
+        # ---------------------------------------------------
+        # OLD
+
         # 1. multiply CPTs for different variables in Q to 1 big CPT
         # Get cpts for vars
         cpts = [self.bn.get_cpt(var) for var in Q]
