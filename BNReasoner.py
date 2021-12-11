@@ -140,7 +140,7 @@ class BNReasoner:
 
     # NOTE: This must become boh a-priori and a-posteriori, currently it is a-posteriori
     # Posterioi is after evidence given, priori is distribution of single variable without evidence
-    # I think I also need to integrate the whole multiplication chain i.e. Right now it just multiplies A and B when those ar ein Q but it needs to multiply the whole chain from the start until arriving at the variable for which we want the marginal distirbution. For example sometimes to get to C you have to do A x B|A x C|B before you arrive at the correct marginal distirbution. Right now this is just B|A x C|B. See video PGM 3 35:52
+    # I think I also need to integrate the whole multiplication chain i.e. Right now it just multiplies A and B when those ar ein Q but it needs to multiply the whole chain from the start until arriving at the variable for which we want the marginal distirbution. For example sometimes to get to C you have to do A x B|A x C|B before you arrive at the correct marginal distirbution. Right now this is just B|A x C|B. See video PGM 3 35:52 and 1:20:30
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
