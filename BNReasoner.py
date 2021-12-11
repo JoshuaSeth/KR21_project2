@@ -284,6 +284,7 @@ class BNReasoner:
             print(table_i)
 
             final_table = self.multiply_cpts(final_table, table_i)
+            print(final_table)
 
         return final_table
 
