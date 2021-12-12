@@ -7,6 +7,7 @@ from BayesNet import BayesNet
 import copy
 import pandas as pd
 import random
+import numpy as np
 pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
 
 
@@ -77,8 +78,10 @@ class BNReasoner:
             cpt_2.to_frame()
 
         # Reset their indices so we don't have weird errors
-        cpt_1.reset_index()
-        cpt_2.reset_index()
+        if pd.Index(np.arange(0, len(cpt_1))).equals(cpt_1.index):
+            cpt_1.reset_index()
+        if pd.Index(np.arange(0, len(cpt_2))).equals(cpt_2.index):
+            cpt_2.reset_index()
 
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
