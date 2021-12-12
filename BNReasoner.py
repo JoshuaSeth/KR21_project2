@@ -423,27 +423,27 @@ class BNReasoner:
         for i in range(len(vars)):
             var = elimination_order[i]
             cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
-            product = cpts_with_var[0]
-            for cpt in cpts_with_var[1:]:
-                product = self.multiply_cpts(product, cpt)
+            if len(cpts_with_var) > 0:
+                product = cpts_with_var[0]
+                for cpt in cpts_with_var[1:]:
+                    product = self.multiply_cpts(product, cpt)
 
-            # max over var
-            if len(product.columns) > 2:
-                max = self.maxing_out(product, [var])
-            else:
-                max = product
+                # max over var
+                if len(product.columns) > 2:
+                    max = self.maxing_out(product, [var])
+                else:
+                    max = product
 
-            # replace factors in cpts with max
-            for i in range(len(cpts)):
-                try:
-                    if cpts[i] in cpts_with_var:
-                        cpts[i] = max
-                except:
-                    pass
+                # replace factors in cpts with max
+                for i in range(len(cpts)):
+                    for cpt in cpts_with_var:
+                        if cpt.equals(cpts[i]):
+                            cpts[i] = max
 
-        result = cpts[0]
-        for cpt in cpts[1:]:
-            result = self.multiply_cpts(result, cpt)
+            result = cpts[0]
+            for cpt in cpts[1:]:
+                print(f'------------------\n{result}\n\n{cpt}\n------------------')
+                result = self.multiply_cpts(result, cpt)
 
         return result
 
