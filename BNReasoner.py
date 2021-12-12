@@ -26,8 +26,8 @@ class BNReasoner:
     def d_separation(self, network, x, y, z):
         z_parents = BN.get_parents(z)
         z_children = BN.get_children(z)
-        #print(z_children)
-        #print(z_parents)
+        # print(z_children)
+        # print(z_parents)
         nodes_to_visit = [(x, 'asc')]
         already_visited = set()
         nodes = set(BN.get_all_variables())
@@ -75,6 +75,10 @@ class BNReasoner:
             cpt_1.to_frame()
         if not isinstance(cpt_2, pd.DataFrame):
             cpt_2.to_frame()
+
+        # Reset their indices so we don't have weird errors
+        cpt_1.reset_index()
+        cpt_2.reset_index()
 
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
@@ -274,9 +278,9 @@ class BNReasoner:
         '''Returns full joint probability distribution table when applied to a
         Bayesian Network'''
         all_variables = self.bn.get_all_variables()
-        #print(all_variables)
+        # print(all_variables)
         final_table = self.bn.get_cpt(all_variables[0])
-        #print(final_table)
+        # print(final_table)
 
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
@@ -380,7 +384,7 @@ class BNReasoner:
 
         # take max p value for remaining rows if they are similar
         PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
-        #print(PD_new)
+        # print(PD_new)
         return PD_new
 
     def random_ordening(self, vars: list) -> list:
@@ -442,7 +446,8 @@ class BNReasoner:
 
             result = cpts[0]
             for cpt in cpts[1:]:
-                print(f'------------------\n{result}\n\n{cpt}\n------------------')
+                print(
+                    f'------------------\n{result}\n\n{cpt}\n------------------')
                 result = self.multiply_cpts(result, cpt)
 
         return result
