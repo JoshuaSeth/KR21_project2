@@ -83,6 +83,12 @@ class BNReasoner:
         if pd.Index(np.arange(0, len(cpt_2))).equals(cpt_2.index):
             cpt_2.reset_index()
 
+        # If there is an index column delete it since it means there is a double index
+        if "index" in list(cpt_1):
+            cpt_1.drop("index", 1, inplace=True)
+        if "index" in list(cpt_2):
+            cpt_2.drop("index", 1, inplace=True)
+
         # 1. get variables that is in 2nd cpt and not in 1st
         cpt_1_no_p = list(cpt_1)[:-1]
         vars_to_add = [col for col in list(
