@@ -158,16 +158,34 @@ class BNReasoner:
             ["hear-bark", "dog-out"], ["family-out"])
         """
         # Alt Get vars in Q and multiply and sum out their chain
+        results = []
         for var in Q:
-            # get ancestors
-            ancestors = nx.ancestors(self.bn.structure, self.bn.get_cpt([var]))
-            for ancestor in ancestors:
-                # sum it with the next ancestor (child)
-                # either sum out the ancestor (merge rows)
-                # or if in evidence just choose the relevant rows
-                # until arriving at the var in Q
-                pass
-            # Then multiply those two final resulting vars in Q
+            # get list of ancestors + var itself
+            ancestors = nx.ancestors(self.bn.structure, self.bn.get_cpt(
+                [var])) + [self.bn.get_cpt(var)]
+
+            # multiply until arriving at this var
+            current_table = ancestors[0]
+            for i in range(1, len(ancestors)):
+                ancestor = ancestors[i]
+                # Marginalize out the evidence
+                for col in list(current_table):
+                    # If E is empty this will simply be a-priori distribution
+                    if col in E:
+                        current_table.drop(col, 1, inplace=True)
+                        current_table = current_table.groupby(
+                            list(current_table)[:-1]).sum().reset_index()
+
+                # And multiply with the next
+                current_table = self.multiply_cpts(current_table, ancestor)
+            results.append(current_table)
+
+        # Then multiply those two final resulting vars in Q
+        end = results[0]
+        for j in range(1, len(results)):
+            end = self.multiply_cpts(end, results[j])
+
+        return end
 
         # ---------------------------------------------------
         # OLD
