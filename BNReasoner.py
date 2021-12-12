@@ -26,8 +26,8 @@ class BNReasoner:
     def d_separation(self, network, x, y, z):
         z_parents = BN.get_parents(z)
         z_children = BN.get_children(z)
-        print(z_children)
-        print(z_parents)
+        #print(z_children)
+        #print(z_parents)
         nodes_to_visit = [(x, 'asc')]
         already_visited = set()
         nodes = set(BN.get_all_variables())
@@ -94,7 +94,7 @@ class BNReasoner:
         singular_vals += [cpt_2[col].iloc[0] for col in list(
             cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
-        print(singular_cols, singular_vals)
+        #print(singular_cols, singular_vals)
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
@@ -274,9 +274,9 @@ class BNReasoner:
         '''Returns full joint probability distribution table when applied to a
         Bayesian Network'''
         all_variables = self.bn.get_all_variables()
-        print(all_variables)
+        #print(all_variables)
         final_table = self.bn.get_cpt(all_variables[0])
-        print(final_table)
+        #print(final_table)
 
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
@@ -371,6 +371,7 @@ class BNReasoner:
         '''Takes set of variables (given als list of strings) that needs to be 
         maxed out as an input and returns table with without given variables 
         when applied to a Bayesian Network'''
+
         # delete columns of variables that need to be maxed out
         cpt = cpt.drop(columns=max_out_variables)
 
@@ -379,7 +380,7 @@ class BNReasoner:
 
         # take max p value for remaining rows if they are similar
         PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
-        print(PD_new)
+        #print(PD_new)
         return PD_new
 
     def random_ordening(self, vars: list) -> list:
@@ -427,14 +428,24 @@ class BNReasoner:
                 product = self.multiply_cpts(product, cpt)
 
             # max over var
-            max = self.maxing_out(product)
+            if len(product.columns) > 2:
+                max = self.maxing_out(product, [var])
+            else:
+                max = product
 
             # replace factors in cpts with max
             for i in range(len(cpts)):
-                if cpts[i] in cpts_with_var:
-                    cpts[i] = max
+                try:
+                    if cpts[i] in cpts_with_var:
+                        cpts[i] = max
+                except:
+                    pass
 
-        return cpts
+        result = cpts[0]
+        for cpt in cpts[1:]:
+            result = self.multiply_cpts(result, cpt)
+
+        return result
 
     def MAP(self, M: list, evidence: list, elimination_order):
         """
@@ -459,8 +470,11 @@ class BNReasoner:
             # calc product over relevant factors
             var = elimination_order[i]
             cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
+            for cpt in cpts_with_var:
+                print(f'-------------------\n{cpt}\n-------------------')
             product = cpts_with_var[0]
             for cpt in cpts_with_var[1:]:
+                print('.')
                 product = self.multiply_cpts(product, cpt)
 
             # replace relevant factors with max or sum
