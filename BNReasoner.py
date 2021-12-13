@@ -1,3 +1,6 @@
+import numpy as np
+import random
+import pandas as pd
 import networkx as nx
 from typing import Union
 from xml.etree.ElementTree import TreeBuilder
@@ -5,9 +8,8 @@ from xml.etree.ElementTree import TreeBuilder
 from numpy import multiply
 from BayesNet import BayesNet
 import copy
-import pandas as pd
-import random
-import numpy as np
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
 
 
@@ -107,7 +109,7 @@ class BNReasoner:
         singular_vals += [cpt_2[col].iloc[0] for col in list(
             cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
-        #print(singular_cols, singular_vals)
+        # print(singular_cols, singular_vals)
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
@@ -159,40 +161,49 @@ class BNReasoner:
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
-        Q: list of variables for which you want a probability table.
-        E: list of variables for which you want the marginalized distribution (opposite of marginalizing out).
+        Q: list of variables for which you want a marginal distribution.
+        E: dict of variables with evidence. Leave empty if you want a-priori distribution
 
         Example usage:
         m = BR.get_marginal_distribution(
-            ["hear-bark", "dog-out"], ["family-out"])
+            ["hear-bark", "dog-out"], {"family-out":True})
         """
         # Alt Get vars in Q and multiply and sum out their chain
         results = []
         for var in Q:
             # get list of ancestors + var itself
-            ancestors = nx.ancestors(self.bn.structure, self.bn.get_cpt(
-                [var])) + [self.bn.get_cpt(var)]
+            ancestors = list(nx.ancestors(
+                self.bn.structure, var)) + [var]
 
             # multiply until arriving at this var
-            current_table = ancestors[0]
+            current_table = self.bn.get_cpt(ancestors[0])
             for i in range(1, len(ancestors)):
                 ancestor = ancestors[i]
-                # Marginalize out the evidence
-                for col in list(current_table):
-                    # If E is empty this will simply be a-priori distribution
-                    if col in E:
-                        current_table.drop(col, 1, inplace=True)
-                        current_table = current_table.groupby(
-                            list(current_table)[:-1]).sum().reset_index()
 
                 # And multiply with the next
-                current_table = self.multiply_cpts(current_table, ancestor)
-            results.append(current_table)
+                current_table = self.multiply_cpts(
+                    current_table, self.bn.get_cpt(ancestor))
+                results.append(current_table)
 
         # Then multiply those two final resulting vars in Q
         end = results[0]
         for j in range(1, len(results)):
             end = self.multiply_cpts(end, results[j])
+
+        # Marginalize out the evidence
+        for col in list(end)[:-1]:
+            print(col, list(E.keys()), col in list(E.keys()))
+            # If E is empty this will simply be a-priori distribution
+            if col not in list(E.keys()) and col not in Q:
+                end.drop(col, 1, inplace=True)
+                end = end.groupby(
+                    list(end)[:-1]).aggregate({'p': 'sum'}).reset_index()
+            # Else we will need to drop the rows contrary to evidence instead of whole variable
+            if col in list(E.keys()) and col not in Q:
+                print('\n\nyes\n\n')
+                end = end[end[col] != E[col]]  # rows contrary evidence
+                end = end.groupby(col).aggregate(
+                    {'p': 'sum'}).reset_index()  # Now group col away
 
         return end
 
@@ -337,8 +348,8 @@ class BNReasoner:
         return PD_new
 
     def summing_out(self, cpt, sum_out_variables):
-        '''Takes set of variables (given als list of strings) that needs to be 
-        summed out as an input and returns table with without given variables 
+        '''Takes set of variables (given als list of strings) that needs to be
+        summed out as an input and returns table with without given variables
         when applied to a Bayesian Network'''
 
         # delete columns of variables that need to be summed out
@@ -399,8 +410,8 @@ class BNReasoner:
         return PD_new
 
     def maxing_out(self, cpt, max_out_variables):
-        '''Takes set of variables (given als list of strings) that needs to be 
-        maxed out as an input and returns table with without given variables 
+        '''Takes set of variables (given als list of strings) that needs to be
+        maxed out as an input and returns table with without given variables
         when applied to a Bayesian Network'''
 
         # delete columns of variables that need to be maxed out
@@ -639,7 +650,7 @@ if __name__ == "__main__":
     cpt_2 = BN.bn.get_cpt("dog-out")
     print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
     factor_product = BN.multiply_cpts(cpt_1, cpt_2)
-    print('factor_product:', factor_product) 
+    print('factor_product:', factor_product)
     '''
 
     # test d-separation
@@ -648,7 +659,8 @@ if __name__ == "__main__":
     BN = BayesNet()
     network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
     BN.draw_structure()
-    test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
+    test = reasoner.d_separation(
+        network, 'family-out', 'hear-bark', ['dog-out'])
     print(test)
 
     # test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
