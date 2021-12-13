@@ -18,7 +18,7 @@ cpt_1 = BR.bn.get_cpt("Winter?")
 cpt_2 = BR.bn.get_cpt("Sprinkler?")
 
 p = BR.get_marginal_distribution(
-    ["Wet Grass?", "Slippery Road?"], {"Sprinkler": True})
+    ["Wet Grass?", "Slippery Road?"], {})
 
 print(p)
 

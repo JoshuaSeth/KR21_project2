@@ -192,7 +192,6 @@ class BNReasoner:
 
         # Marginalize out the evidence
         for col in list(end)[:-1]:
-            print(col, list(E.keys()), col in list(E.keys()))
             # If E is empty this will simply be a-priori distribution
             if col not in list(E.keys()) and col not in Q:
                 end.drop(col, 1, inplace=True)
@@ -200,34 +199,13 @@ class BNReasoner:
                     list(end)[:-1]).aggregate({'p': 'sum'}).reset_index()
             # Else we will need to drop the rows contrary to evidence instead of whole variable
             if col in list(E.keys()) and col not in Q:
-                print('\n\nyes\n\n')
-                end = end[end[col] != E[col]]  # rows contrary evidence
-                end = end.groupby(col).aggregate(
-                    {'p': 'sum'}).reset_index()  # Now group col away
+                end = end[end[col] == E[col]]  # rows contrary evidence
+                # Only relevant rows still here so drop col
+                end.drop(col, 1, inplace=True)
+                end = end.groupby(list(end)[:-1]).aggregate(
+                    {'p': 'sum'}).reset_index()  # Now group other cols (with only relevant p's)
 
         return end
-
-        # ---------------------------------------------------
-        # OLD
-
-        # 1. multiply CPTs for different variables in Q to 1 big CPT
-        # Get cpts for vars
-        cpts = [self.bn.get_cpt(var) for var in Q]
-        # Multiply them into 1 big cpt
-        multiplied_cpt = cpts[0]
-        for i in range(1, len(cpts)):
-            cpt = cpts[i]
-            multiplied_cpt = self.multiply_cpts(multiplied_cpt, cpt)
-
-        # 2. marginalize out variables NOT in E
-        for var in list(multiplied_cpt):
-            if var not in E and var != "p":
-                multiplied_cpt.drop(var, 1, inplace=True)
-            # Sum up p for rows that are the same
-            multiplied_cpt = multiplied_cpt.groupby(
-                list(multiplied_cpt)[:-1]).sum().reset_index()
-
-        return multiplied_cpt
 
     def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
