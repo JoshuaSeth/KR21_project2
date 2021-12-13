@@ -190,6 +190,11 @@ class BNReasoner:
         for j in range(1, len(results)):
             end = self.multiply_cpts(end, results[j])
 
+        end = self.get_joint_probability_distribution()
+        # end = self.bn.get_cpt(Q[0])
+        # for i in range(1, len(Q)):
+        #     end = self.multiply_cpts(end, self.bn.get_cpt(Q[i]))
+        # print(end)
         # Marginalize out the evidence
         for col in list(end)[:-1]:
             # If E is empty this will simply be a-priori distribution
@@ -301,10 +306,7 @@ class BNReasoner:
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
             table_i = self.bn.get_cpt(all_variables[i])
-            print(table_i)
-
             final_table = self.multiply_cpts(final_table, table_i)
-            print(final_table)
 
         return final_table
 
