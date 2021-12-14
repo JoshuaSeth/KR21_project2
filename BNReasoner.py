@@ -466,16 +466,21 @@ class BNReasoner:
                     max = product
 
                 # replace factors in cpts with max
-                for i in range(len(cpts)):
-                    for cpt in cpts_with_var:
-                        if cpt.equals(cpts[i]):
-                            cpts[i] = max
+                new_cpts = []
+                for cpt in cpts:
+                    for cpt_with_var in cpts_with_var:
+                        if not cpt.equals(cpt_with_var):
+                            new_cpts.append(cpt)
 
-            result = cpts[0]
-            for cpt in cpts[1:]:
-                print(
-                    f'------------------\n{result}\n\n{cpt}\n------------------')
-                result = self.multiply_cpts(result, cpt)
+                cpts = new_cpts
+                cpts.append(max)
+                print(len(cpts))
+
+                result = cpts[0]
+                for cpt in cpts[1:]:
+                    if not result.equals(cpt):
+                        print(f'------------------\n{result}\n\n{cpt}\n------------------')
+                        result = self.multiply_cpts(result, cpt)
 
         return result
 
