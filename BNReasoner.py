@@ -109,14 +109,17 @@ class BNReasoner:
         singular_vals += [cpt_2[col].iloc[0] for col in list(
             cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
+        # DIT IS GEMARKEERD VOOR RIK (hiervoor moet je waarschinlijk edges voor Node verzamlen bijv. node C heeft edge A en B dan maken we een table ABC )
         # print(singular_cols, singular_vals)
-        # 2. Construct new CPT
-        new_cpt_cols = cpt_1_no_p + vars_to_add
+        # 2. Construct new CPT with length
+        new_cpt_cols = cpt_1_no_p + vars_to_add  # niet relevant voor Rik
+        # lengte table is 2^3 (a,b,c)
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
         new_cpt = pd.DataFrame(columns=new_cpt_cols,
-                               index=range(new_cpt_len), dtype=object)
+                               index=range(new_cpt_len), dtype=object)  # Hier maak een nieuwe table
 
         # 3. Fill in CPT with Trues and falses
+        # Hier vul je de kolommon van die nieuwe tabel
         for i in range(len(new_cpt_cols)-1):
             # If this was a singular value column
             if new_cpt_cols[i] in singular_cols:
@@ -130,8 +133,7 @@ class BNReasoner:
                 cur_bool = not cur_bool
                 new_cpt[new_cpt_cols[i]][start_i:start_i +
                                          rows_to_fill_in] = cur_bool
-        # print("filling in vals")
-        # print(new_cpt)
+        # DIT IS GEMARKEERD VOOR RIK
 
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
         for index, row in new_cpt.iterrows():
