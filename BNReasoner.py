@@ -544,7 +544,72 @@ class BNReasoner:
                     cpts[i] = factor
 
         return cpts
+    
+def create_acyclic_digraph_network_of_size_N(N:int, prob_edges:float): # can adjust number of nodes with N and number of edges with prob_edges(>=0 and =<1)
+    cyclic_network = nx.gnp_random_graph(N, prob_edges, directed=True)
+    acyclic_network = nx.DiGraph([(u,v,{'weight':random.randint(-10,10)}) for (u,v) in cyclic_network.edges() if u<v])
+    return acyclic_network
+    # returns a DAG
 
+def get_number_of_parents_random_network(network):
+    all_nodes = list(network.nodes)
+    all_nodes.sort()
+    all_parents = []
+    for node in all_nodes:
+        parents = [c for c in network.predecessors(node)]
+        all_parents.append(len(parents))
+    return list(zip(all_nodes, all_parents)) 
+    # this returns a list with tuples, where in the tuple (2, 4) the 2 is the variable and the 4 is the number of parents that 2 has.
+
+def get_which_parents_random_network(network):
+    all_nodes = list(network.nodes)
+    all_nodes.sort()
+    all_parents = []
+    for node in all_nodes:
+        parents = [c for c in network.predecessors(node)]
+        all_parents.append(parents)
+    return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
+    # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
+
+'''
+checking whether the function creates satisfactory DAGs
+'''
+acyclic = create_acyclic_digraph_network_of_size_N(7, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
+nx.draw(acyclic, with_labels = True)
+plt.show()
+
+'''
+checking whether the get_parents functions work properly, also check the data types
+'''
+number_of_parents = get_number_of_parents_random_network(acyclic)
+print(number_of_parents)
+which_parents = get_which_parents_random_network(acyclic)
+print(which_parents)
+
+'''
+made a start with getting the correct number of rows based on the variable and correct column order
+This might not be necessary if you can get the parents data in the right structure
+'''
+var_3 = which_parents[3]
+cols = var_3[1]
+cols.append(var_3[0])
+rows = 2 ** (len(cols))
+
+'''
+playing around with making truth tables for the dataframe.
+'''
+truth_values_1 = []
+for j in range(int(rows / 2)):
+    truth_values_1.append(True)
+for k in range(int(rows/2)):
+    truth_values_1.append(False)
+print(truth_values_1)
+
+'''
+Printing the dataframe to check if the dimensions and columns are correct.
+'''
+df = pd.DataFrame(index = np.arange(rows), columns = cols)
+print(df)
 
 # test maxing out
 '''
