@@ -59,6 +59,38 @@ class BNReasoner:
                             nodes_to_visit.append((parents, 'asc'))
         return True
 
+    @staticmethod
+    def __multiply_cpts__(cpt1: pd.DataFrame, cpt2: pd.DataFrame) -> pd.DataFrame:
+        """
+        Multiplies two CPTs and returns the combined one
+        :param cpt1: the first CPT
+        :param cpt2: the seconds CPT
+        :return combined CPT
+        """
+        result = cpt1.copy(deep=True)
+        cpt1_columns = set(cpt1.columns) - {'p'}
+        cpt2_columns = set(cpt2.columns) - {'p'}
+
+        diff = cpt2_columns.difference(cpt1_columns)
+
+        for d in diff:
+            insert_idx = len(cpt1_columns) - 1
+            if {True, False} == set(cpt2[d]):
+                old = copy.deepcopy(result)
+                result.insert(insert_idx, d, True)
+                result = pd.concat([result, old]).fillna(False)
+            else:
+                for tv in [True, False]:
+                    result.insert(insert_idx, d, tv)
+            result = result.sort_values(by=list(result.columns)).reset_index(drop=True)
+
+        for idx_result_row, result_row in result.iterrows():
+            for _, cpt2_row in cpt2.iterrows():
+                if result_row[cpt2_columns].equals(cpt2_row[cpt2_columns]):
+                    result.at[idx_result_row, 'p'] *= cpt2_row['p']
+
+        return result
+
     def is_unique(self, s):
         '''Quick check if all values in df are equal'''
         if not isinstance(s, pd.DataFrame):
