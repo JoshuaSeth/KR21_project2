@@ -570,6 +570,21 @@ def get_which_parents_random_network(network):
         all_parents.append(parents)
     return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
     # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
+    
+'''
+checking whether the function creates satisfactory DAGs
+'''
+acyclic = create_acyclic_digraph_network_of_size_N(5, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
+#nx.draw(acyclic, with_labels = True)
+#plt.show()
+
+'''
+checking whether the get_parents functions work properly, also check the data types
+'''
+number_of_parents = get_number_of_parents_random_network(acyclic)
+print(number_of_parents)
+which_parents = get_which_parents_random_network(acyclic)
+print(which_parents)
 
 
 # test pruner
@@ -580,6 +595,26 @@ bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
 #pruned_bn_grass.bn.draw_structure()
 #BNReasoner('testing/lecture_example.BIFXML').pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
 
+'''
+This code takes which_parents which is data as [(int, []), (int, [])] etc and return [[0], [0, 1], [0, 2]] which means node 0 has no parents, node 1 has 0 as a parent and node 2 has 0 has a parent
+'''
+all_columns = []
+for i in range(len(which_parents)):
+    node_i_column = []
+    node_i = which_parents[i]
+    parents_of_node_i = node_i[1]
+    for element in parents_of_node_i:
+        node_i_column.append(element) # first append the data in the second element of the tuple
+    node_i_column.append(node_i[0])
+    all_columns.append(node_i_column) # then append the data in the second element of the tuple (the node itself)
+print(all_columns) 
+
+number_of_rows = [2 ** len(c) for c in all_columns] # make the  number of rows for the pandas dataframe (2^number of columns)
+print(number_of_rows)
+
+df = pd.DataFrame(index= np.arange(number_of_rows[4]), columns=all_columns[4]) # can change 4 to the variable you want to check, creates df for that var
+print(df)
+    
 # test random network generator 
 '''
 # checking whether the function creates satisfactory DAGs
