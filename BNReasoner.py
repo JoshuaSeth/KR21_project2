@@ -249,23 +249,23 @@ class BNReasoner:
     def pruner(self, Q, E):
         '''Returns pruned network for given variables Q and evidence E'''
         # create copy of network to work on
-        network = copy.deepcopy(self.bn)
+        network = copy.deepcopy(self)
 
         # deleting leaf nodes
-        variables = network.get_all_variables()
+        variables = network.bn.get_all_variables()
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = network.get_children([variable])
+                children = network.bn.get_children([variable])
                 # ... and has no children, then delete it
                 if not children:
-                    network.del_var(variable)
+                    network.bn.del_var(variable)
 
         # deleting outgoing edges from E
         for evidence in E:
-            children = network.get_children([evidence])
+            children = network.bn.get_children([evidence])
             for child in children:
-                network.del_edge((evidence, child))
+                network.bn.del_edge((evidence, child))
 
         return network
 
@@ -571,6 +571,15 @@ def get_which_parents_random_network(network):
     return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
     # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
 
+
+# test pruner
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+bn_grass.bn.draw_structure()
+pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
+bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
+#pruned_bn_grass.bn.draw_structure()
+#BNReasoner('testing/lecture_example.BIFXML').pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
+
 # test random network generator 
 '''
 # checking whether the function creates satisfactory DAGs
@@ -618,14 +627,6 @@ bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
 print(example_cpt)
 bn_grass.summing_out(example_cpt, ['Wet Grass?'])
-'''
-
-# test pruner
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-bn_grass.bn.draw_structure()
-pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
-pruned_bn_grass.bn.draw_structure()
 '''
 
 # test JPD^maxing-out
