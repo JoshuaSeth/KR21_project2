@@ -1,3 +1,4 @@
+from networkx.algorithms.planarity import check_planarity
 import numpy as np
 import random
 import pandas as pd
@@ -247,7 +248,9 @@ class BNReasoner:
         return end
 
     def pruner(self, Q, E):
-        '''Returns pruned network for given variables Q and evidence E'''
+        ''' Returns pruned network for given variables Q and evidence E, where 
+        evidence is given as a set of tuples of variable and truth value e.g. 
+        {('Rain?', True), (...)}'''
         # create copy of network to work on
         network = copy.deepcopy(self)
 
@@ -261,11 +264,17 @@ class BNReasoner:
                 if not children:
                     network.bn.del_var(variable)
 
-        # deleting outgoing edges from E
         for evidence in E:
-            children = network.bn.get_children([evidence])
+            children = network.bn.get_children([evidence[0]])
             for child in children:
-                network.bn.del_edge((evidence, child))
+                # delete outgoing edges from E
+                network.bn.del_edge((evidence[0], child))
+                
+                # update cpt of child
+                cpt_child = network.bn.get_cpt(child)
+                cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence[0]] != evidence[1]])
+                cpt_child = cpt_child.drop(columns=[evidence[0]])
+                network.bn.update_cpt(child, cpt_child)
 
         return network
 
@@ -570,34 +579,34 @@ def get_which_parents_random_network(network):
         all_parents.append(parents)
     return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
     # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
-    
+
+
+# test pruner
+check_var = 'Winter?'
+
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+#bn_grass.bn.draw_structure()
+print('BEFORE')
+print(bn_grass.bn.get_all_cpts())
+pruned_bn_grass = bn_grass.pruner({'Wet Grass?'},{('Winter?', True), ('Rain?', False)})
+print('AFTRER')
+print(pruned_bn_grass.bn.get_all_cpts())
+
+
+# test random network generator 
 '''
-checking whether the function creates satisfactory DAGs
-'''
+#checking whether the function creates satisfactory DAGs
 acyclic = create_acyclic_digraph_network_of_size_N(5, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
 #nx.draw(acyclic, with_labels = True)
 #plt.show()
 
-'''
-checking whether the get_parents functions work properly, also check the data types
-'''
+#checking whether the get_parents functions work properly, also check the data types
 number_of_parents = get_number_of_parents_random_network(acyclic)
 print(number_of_parents)
 which_parents = get_which_parents_random_network(acyclic)
 print(which_parents)
 
-
-# test pruner
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-bn_grass.bn.draw_structure()
-pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
-bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
-#pruned_bn_grass.bn.draw_structure()
-#BNReasoner('testing/lecture_example.BIFXML').pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'}).bn.draw_structure()
-
-'''
-This code takes which_parents which is data as [(int, []), (int, [])] etc and return [[0], [0, 1], [0, 2]] which means node 0 has no parents, node 1 has 0 as a parent and node 2 has 0 has a parent
-'''
+#This code takes which_parents which is data as [(int, []), (int, [])] etc and return [[0], [0, 1], [0, 2]] which means node 0 has no parents, node 1 has 0 as a parent and node 2 has 0 has a parent
 all_columns = []
 for i in range(len(which_parents)):
     node_i_column = []
@@ -614,9 +623,7 @@ print(number_of_rows)
 
 df = pd.DataFrame(index= np.arange(number_of_rows[4]), columns=all_columns[4]) # can change 4 to the variable you want to check, creates df for that var
 print(df)
-    
-# test random network generator 
-'''
+
 # checking whether the function creates satisfactory DAGs
 acyclic = create_acyclic_digraph_network_of_size_N(7, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
 nx.draw(acyclic, with_labels = True)
