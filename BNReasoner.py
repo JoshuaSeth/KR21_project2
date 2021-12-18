@@ -1,4 +1,3 @@
-import itertools
 from networkx.algorithms.planarity import check_planarity
 import numpy as np
 import random
@@ -29,13 +28,13 @@ class BNReasoner:
             self.bn = net
 
     def d_separation(self, network, x, y, z):
-        z_parents = self.bn.get_parents(z)
-        z_children = self.bn.get_children(z)
+        z_parents = BN.get_parents(z)
+        z_children = BN.get_children(z)
         # print(z_children)
         # print(z_parents)
         nodes_to_visit = [(x, 'asc')]
         already_visited = set()
-        nodes = set(self.bn.get_all_variables())
+        nodes = set(BN.get_all_variables())
 
         while nodes_to_visit:
             (node_name, up_or_down) = nodes_to_visit.pop()
@@ -389,13 +388,13 @@ class BNReasoner:
         return dict_of_degrees_sorted
 
     def number_of_edges(self, X: str) -> int:
-        int_graph = self.bn.get_interaction_graph()
+        int_graph = BN.get_interaction_graph()
         length = len(int_graph[X])
         return length
 
     def min_fill_ordering(self, X: list) -> list:
         '''Input list of strings'''
-        int_graph = self.bn.get_interaction_graph()
+        int_graph = BN.get_interaction_graph()
         num_edges = []
         for x in X:
             all_neighbors = list(int_graph.neighbors(x))
