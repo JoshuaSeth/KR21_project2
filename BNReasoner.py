@@ -248,27 +248,35 @@ class BNReasoner:
         return end
 
     def pruner(self, Q, E):
-        '''Returns pruned network for given variables Q and evidence E'''
+        ''' Returns pruned network for given variables Q and evidence E, where 
+        evidence is given as a set of tuples of variable and truth value e.g. 
+        {('Rain?', True), (...)}'''
         # create copy of network to work on
-        network = copy.deepcopy(self.bn)
+        bn = copy.deepcopy(self.bn)
 
         # deleting leaf nodes
-        variables = network.get_all_variables()
+        variables = bn.get_all_variables()
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = network.get_children([variable])
+                children = bn.get_children([variable])
                 # ... and has no children, then delete it
                 if not children:
-                    network.del_var(variable)
+                    bn.del_var(variable)
 
-        # deleting outgoing edges from E
         for evidence in E:
-            children = network.get_children([evidence])
+            children = bn.get_children([evidence[0]])
             for child in children:
-                network.del_edge((evidence, child))
+                # delete outgoing edges from E
+                bn.del_edge((evidence[0], child))
+                
+                # update cpt of child
+                cpt_child = bn.get_cpt(child)
+                cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence[0]] != evidence[1]])
+                cpt_child = cpt_child.drop(columns=[evidence[0]])
+                bn.update_cpt(child, cpt_child)
 
-        return network
+        return bn
 
     def get_all_paths(self, start_node, end_node):
         """
@@ -463,7 +471,7 @@ class BNReasoner:
         
         """
 
-        pruned_network = self.pruner([], [var for (var, _) in evidence])
+        pruned_network = self.pruner([], evidence)
         
         # get al variables
         vars = pruned_network.get_all_variables()
