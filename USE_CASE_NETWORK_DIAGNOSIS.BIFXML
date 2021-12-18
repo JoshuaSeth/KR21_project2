@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE BIF [
+	      <!ATTLIST BIF VERSION CDATA #REQUIRED>
+	<!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
+	<!ELEMENT NAME (#PCDATA)>
+	<!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
+	      <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
+	<!ELEMENT OUTCOME (#PCDATA)>
+	<!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
+	<!ELEMENT FOR (#PCDATA)>
+	<!ELEMENT GIVEN (#PCDATA)>
+	<!ELEMENT TABLE (#PCDATA)>
+	<!ELEMENT PROPERTY (#PCDATA)>
+]>
+
+
+<BIF VERSION="0.3">
+<NETWORK>
+<NAME>random-network</NAME>
+
+<!-- Variables -->
+<VARIABLE TYPE="nature">
+	<NAME>older_than_65</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (-155, 175)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Obesity</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (-188, -313)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Smoker</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Shortness_of_breath</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>High_blood_pressure</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Decreased_respiratory_muscle_endurance</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Metabolic_syndrome</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Left_ventricular_hypertrophy</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Tightness_in_chest</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Atherosclerosis</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Pulmonary_fibrosis</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Decreased_mental_alertness</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Cardiovascular_disease</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Chronic_lung_disease</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (16, -140)</PROPERTY>
+</VARIABLE>
+
+<!-- Probability distributions -->
+<DEFINITION>
+	<FOR>Smoker</FOR>
+	<TABLE>0.19 0.81 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Obesity</FOR>
+	<TABLE>0.181 0.819 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>older_than_65</FOR>
+	<TABLE>0.2 0.8 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Shortness_of_breath</FOR>
+	<GIVEN>Smoker</GIVEN>
+	<GIVEN>Decreased_respiratory_muscle_endurance</GIVEN>
+	<TABLE>0.9 0.1 0.3 0.7 0.5 0.5 0.2 0.8 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>High_blood_pressure</FOR>
+	<GIVEN>Obesity</GIVEN>
+	<GIVEN>Smoker</GIVEN>
+	<GIVEN>older_than_65</GIVEN>
+	<TABLE>0.95 0.05 0.3 0.7 0.4 0.6 0.2 0.8 0.35 0.65 0.25 0.75 0.2 0.8 0.05 0.95 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Decreased_respiratory_muscle_endurance</FOR>
+	<GIVEN>older_than_65</GIVEN>
+	<GIVEN>Smoker</GIVEN>
+	<TABLE>0.99 0.01 0.75 0.25 0.6 0.4 0.2 0.8 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Metabolic_syndrome</FOR>
+	<GIVEN>older_than_65</GIVEN>
+	<GIVEN>Obesity</GIVEN>
+	<GIVEN>High_blood_pressure</GIVEN>
+	<TABLE>0.05 0.95 0.85 0.15 0.7 0.3 0.5 0.5 0.75 0.25 0.6 0.4 0.5 0.5 0.2 0.8 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Left_ventricular_hypertrophy</FOR>
+	<GIVEN>High_blood_pressure</GIVEN>
+	<GIVEN>Obesity</GIVEN>
+	<TABLE>0.97 0.03 0.85 0.15 0.65 0.35 0.25 0.75 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Tightness_in_chest</FOR>
+	<GIVEN>High_blood_pressure</GIVEN>
+	<GIVEN>Smoker</GIVEN>
+	<TABLE>0.9 0.1 0.7 0.3 0.5 0.5 0.25 0.75 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Atherosclerosis</FOR>
+	<GIVEN>Metabolic_syndrome</GIVEN>
+	<GIVEN>High_blood_pressure</GIVEN>
+	<TABLE>0.93 0.07 0.65 0.35 0.55 0.45 0.17 0.83 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Pulmonary_fibrosis</FOR>
+	<GIVEN>Shortness_of_breath</GIVEN>
+	<GIVEN>Tightness_in_chest</GIVEN>
+	<TABLE>0.99 0.01 0.8 0.2 0.9 0.1 0.6 0.4 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Decreased_mental_alertness</FOR>
+	<GIVEN>Metabolic_syndrome</GIVEN>
+	<GIVEN>Tightness_in_chest</GIVEN>
+	<TABLE>0.85 0.15 0.6 0.4 0.75 0.25 0.35 0.65 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Cardiovascular_disease</FOR>
+	<GIVEN>Atherosclerosis</GIVEN>
+	<GIVEN>Left_ventricular_hypertrophy</GIVEN>
+	<TABLE>0.95 0.05 0.65 0.35 0.5 0.5 0.2 0.8 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>Chronic_lung_disease</FOR>
+	<GIVEN>Pulmonary_fibrosis</GIVEN>
+	<GIVEN>Decreased_mental_alertness</GIVEN>
+	<GIVEN>Smoker</GIVEN>
+	<TABLE>0.97 0.03 0.6 0.4 0.8 0.2 0.3 0.7 0.75 0.25 0.35 0.65 0.55 0.45 0.05 0.95 </TABLE>
+</DEFINITION>
+
+</NETWORK>
+</BIF>

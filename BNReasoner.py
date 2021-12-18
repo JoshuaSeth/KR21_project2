@@ -1,3 +1,7 @@
+from networkx.algorithms.planarity import check_planarity
+import numpy as np
+import random
+import pandas as pd
 import networkx as nx
 from typing import Union
 from xml.etree.ElementTree import TreeBuilder
@@ -5,9 +9,8 @@ from xml.etree.ElementTree import TreeBuilder
 from numpy import multiply
 from BayesNet import BayesNet
 import copy
-import pandas as pd
-import random
-import numpy as np
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
 
 
@@ -56,6 +59,38 @@ class BNReasoner:
                         for parents in z_parents:
                             nodes_to_visit.append((parents, 'asc'))
         return True
+
+    @staticmethod
+    def __multiply_cpts__(cpt1: pd.DataFrame, cpt2: pd.DataFrame) -> pd.DataFrame:
+        """
+        Multiplies two CPTs and returns the combined one
+        :param cpt1: the first CPT
+        :param cpt2: the seconds CPT
+        :return combined CPT
+        """
+        result = cpt1.copy(deep=True)
+        cpt1_columns = set(cpt1.columns) - {'p'}
+        cpt2_columns = set(cpt2.columns) - {'p'}
+
+        diff = cpt2_columns.difference(cpt1_columns)
+
+        for d in diff:
+            insert_idx = len(cpt1_columns) - 1
+            if {True, False} == set(cpt2[d]):
+                old = copy.deepcopy(result)
+                result.insert(insert_idx, d, True)
+                result = pd.concat([result, old]).fillna(False)
+            else:
+                for tv in [True, False]:
+                    result.insert(insert_idx, d, tv)
+            result = result.sort_values(by=list(result.columns)).reset_index(drop=True)
+
+        for idx_result_row, result_row in result.iterrows():
+            for _, cpt2_row in cpt2.iterrows():
+                if result_row[cpt2_columns].equals(cpt2_row[cpt2_columns]):
+                    result.at[idx_result_row, 'p'] *= cpt2_row['p']
+
+        return result
 
     def is_unique(self, s):
         '''Quick check if all values in df are equal'''
@@ -107,14 +142,17 @@ class BNReasoner:
         singular_vals += [cpt_2[col].iloc[0] for col in list(
             cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
-        #print(singular_cols, singular_vals)
-        # 2. Construct new CPT
-        new_cpt_cols = cpt_1_no_p + vars_to_add
+        # DIT IS GEMARKEERD VOOR RIK (hiervoor moet je waarschinlijk edges voor Node verzamlen bijv. node C heeft edge A en B dan maken we een table ABC )
+        # print(singular_cols, singular_vals)
+        # 2. Construct new CPT with length
+        new_cpt_cols = cpt_1_no_p + vars_to_add  # niet relevant voor Rik
+        # lengte table is 2^3 (a,b,c)
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
         new_cpt = pd.DataFrame(columns=new_cpt_cols,
-                               index=range(new_cpt_len), dtype=object)
+                               index=range(new_cpt_len), dtype=object)  # Hier maak een nieuwe table
 
         # 3. Fill in CPT with Trues and falses
+        # Hier vul je de kolommon van die nieuwe tabel
         for i in range(len(new_cpt_cols)-1):
             # If this was a singular value column
             if new_cpt_cols[i] in singular_cols:
@@ -128,8 +166,7 @@ class BNReasoner:
                 cur_bool = not cur_bool
                 new_cpt[new_cpt_cols[i]][start_i:start_i +
                                          rows_to_fill_in] = cur_bool
-        # print("filling in vals")
-        # print(new_cpt)
+        # DIT IS GEMARKEERD VOOR RIK
 
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
         for index, row in new_cpt.iterrows():
@@ -159,85 +196,85 @@ class BNReasoner:
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
-        Q: list of variables for which you want a probability table.
-        E: list of variables for which you want the marginalized distribution (opposite of marginalizing out).
+        Q: list of variables for which you want a marginal distribution.
+        E: dict of variables with evidence. Leave empty if you want a-priori distribution
 
         Example usage:
         m = BR.get_marginal_distribution(
-            ["hear-bark", "dog-out"], ["family-out"])
+            ["hear-bark", "dog-out"], {"family-out":True})
         """
         # Alt Get vars in Q and multiply and sum out their chain
         results = []
         for var in Q:
             # get list of ancestors + var itself
-            ancestors = nx.ancestors(self.bn.structure, self.bn.get_cpt(
-                [var])) + [self.bn.get_cpt(var)]
+            ancestors = list(nx.ancestors(
+                self.bn.structure, var)) + [var]
 
             # multiply until arriving at this var
-            current_table = ancestors[0]
+            current_table = self.bn.get_cpt(ancestors[0])
             for i in range(1, len(ancestors)):
                 ancestor = ancestors[i]
-                # Marginalize out the evidence
-                for col in list(current_table):
-                    # If E is empty this will simply be a-priori distribution
-                    if col in E:
-                        current_table.drop(col, 1, inplace=True)
-                        current_table = current_table.groupby(
-                            list(current_table)[:-1]).sum().reset_index()
 
                 # And multiply with the next
-                current_table = self.multiply_cpts(current_table, ancestor)
-            results.append(current_table)
+                current_table = self.multiply_cpts(
+                    current_table, self.bn.get_cpt(ancestor))
+                results.append(current_table)
 
         # Then multiply those two final resulting vars in Q
         end = results[0]
         for j in range(1, len(results)):
             end = self.multiply_cpts(end, results[j])
 
+        end = self.get_joint_probability_distribution()
+        # end = self.bn.get_cpt(Q[0])
+        # for i in range(1, len(Q)):
+        #     end = self.multiply_cpts(end, self.bn.get_cpt(Q[i]))
+        # print(end)
+        # Marginalize out the evidence
+        for col in list(end)[:-1]:
+            # If E is empty this will simply be a-priori distribution
+            if col not in list(E.keys()) and col not in Q:
+                end.drop(col, 1, inplace=True)
+                end = end.groupby(
+                    list(end)[:-1]).aggregate({'p': 'sum'}).reset_index()
+            # Else we will need to drop the rows contrary to evidence instead of whole variable
+            if col in list(E.keys()) and col not in Q:
+                end = end[end[col] == E[col]]  # rows contrary evidence
+                # Only relevant rows still here so drop col
+                end.drop(col, 1, inplace=True)
+                end = end.groupby(list(end)[:-1]).aggregate(
+                    {'p': 'sum'}).reset_index()  # Now group other cols (with only relevant p's)
+
         return end
 
-        # ---------------------------------------------------
-        # OLD
-
-        # 1. multiply CPTs for different variables in Q to 1 big CPT
-        # Get cpts for vars
-        cpts = [self.bn.get_cpt(var) for var in Q]
-        # Multiply them into 1 big cpt
-        multiplied_cpt = cpts[0]
-        for i in range(1, len(cpts)):
-            cpt = cpts[i]
-            multiplied_cpt = self.multiply_cpts(multiplied_cpt, cpt)
-
-        # 2. marginalize out variables NOT in E
-        for var in list(multiplied_cpt):
-            if var not in E and var != "p":
-                multiplied_cpt.drop(var, 1, inplace=True)
-            # Sum up p for rows that are the same
-            multiplied_cpt = multiplied_cpt.groupby(
-                list(multiplied_cpt)[:-1]).sum().reset_index()
-
-        return multiplied_cpt
-
     def pruner(self, Q, E):
-        '''Returns pruned network for given variables Q and evidence E'''
+        ''' Returns pruned network for given variables Q and evidence E, where 
+        evidence is given as a set of tuples of variable and truth value e.g. 
+        {('Rain?', True), (...)}'''
         # create copy of network to work on
-        network = copy.deepcopy(self.bn)
+        network = copy.deepcopy(self)
 
         # deleting leaf nodes
-        variables = network.get_all_variables()
+        variables = network.bn.get_all_variables()
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = network.get_children([variable])
+                children = network.bn.get_children([variable])
                 # ... and has no children, then delete it
                 if not children:
-                    network.del_var(variable)
+                    network.bn.del_var(variable)
 
-        # deleting outgoing edges from E
         for evidence in E:
-            children = network.get_children([evidence])
+            children = network.bn.get_children([evidence[0]])
             for child in children:
-                network.del_edge((evidence, child))
+                # delete outgoing edges from E
+                network.bn.del_edge((evidence[0], child))
+                
+                # update cpt of child
+                cpt_child = network.bn.get_cpt(child)
+                cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence[0]] != evidence[1]])
+                cpt_child = cpt_child.drop(columns=[evidence[0]])
+                network.bn.update_cpt(child, cpt_child)
 
         return network
 
@@ -312,10 +349,7 @@ class BNReasoner:
         # multiplies all CPT to get a JPD
         for i in range(1, len(all_variables)):
             table_i = self.bn.get_cpt(all_variables[i])
-            print(table_i)
-
             final_table = self.multiply_cpts(final_table, table_i)
-            print(final_table)
 
         return final_table
 
@@ -337,8 +371,8 @@ class BNReasoner:
         return PD_new
 
     def summing_out(self, cpt, sum_out_variables):
-        '''Takes set of variables (given als list of strings) that needs to be 
-        summed out as an input and returns table with without given variables 
+        '''Takes set of variables (given als list of strings) that needs to be
+        summed out as an input and returns table with without given variables
         when applied to a Bayesian Network'''
 
         # delete columns of variables that need to be summed out
@@ -399,8 +433,8 @@ class BNReasoner:
         return PD_new
 
     def maxing_out(self, cpt, max_out_variables):
-        '''Takes set of variables (given als list of strings) that needs to be 
-        maxed out as an input and returns table with without given variables 
+        '''Takes set of variables (given als list of strings) that needs to be
+        maxed out as an input and returns table with without given variables
         when applied to a Bayesian Network'''
 
         # delete columns of variables that need to be maxed out
@@ -526,7 +560,107 @@ class BNReasoner:
                     cpts[i] = factor
 
         return cpts
+    
+def create_acyclic_digraph_network_of_size_N(N:int, prob_edges:float): # can adjust number of nodes with N and number of edges with prob_edges(>=0 and =<1)
+    cyclic_network = nx.gnp_random_graph(N, prob_edges, directed=True)
+    acyclic_network = nx.DiGraph([(u,v,{'weight':random.randint(-10,10)}) for (u,v) in cyclic_network.edges() if u<v])
+    return acyclic_network
+    # returns a DAG
 
+def get_number_of_parents_random_network(network):
+    all_nodes = list(network.nodes)
+    all_nodes.sort()
+    all_parents = []
+    for node in all_nodes:
+        parents = [c for c in network.predecessors(node)]
+        all_parents.append(len(parents))
+    return list(zip(all_nodes, all_parents)) 
+    # this returns a list with tuples, where in the tuple (2, 4) the 2 is the variable and the 4 is the number of parents that 2 has.
+
+def get_which_parents_random_network(network):
+    all_nodes = list(network.nodes)
+    all_nodes.sort()
+    all_parents = []
+    for node in all_nodes:
+        parents = [c for c in network.predecessors(node)]
+        all_parents.append(parents)
+    return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
+    # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
+
+
+# test pruner
+check_var = 'Winter?'
+
+bn_grass = BNReasoner('testing/lecture_example.BIFXML')
+#bn_grass.bn.draw_structure()
+print('BEFORE')
+print(bn_grass.bn.get_all_cpts())
+pruned_bn_grass = bn_grass.pruner({'Wet Grass?'},{('Winter?', True), ('Rain?', False)})
+print('AFTRER')
+print(pruned_bn_grass.bn.get_all_cpts())
+
+
+# test random network generator 
+'''
+#checking whether the function creates satisfactory DAGs
+acyclic = create_acyclic_digraph_network_of_size_N(5, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
+#nx.draw(acyclic, with_labels = True)
+#plt.show()
+
+#checking whether the get_parents functions work properly, also check the data types
+number_of_parents = get_number_of_parents_random_network(acyclic)
+print(number_of_parents)
+which_parents = get_which_parents_random_network(acyclic)
+print(which_parents)
+
+#This code takes which_parents which is data as [(int, []), (int, [])] etc and return [[0], [0, 1], [0, 2]] which means node 0 has no parents, node 1 has 0 as a parent and node 2 has 0 has a parent
+all_columns = []
+for i in range(len(which_parents)):
+    node_i_column = []
+    node_i = which_parents[i]
+    parents_of_node_i = node_i[1]
+    for element in parents_of_node_i:
+        node_i_column.append(element) # first append the data in the second element of the tuple
+    node_i_column.append(node_i[0])
+    all_columns.append(node_i_column) # then append the data in the second element of the tuple (the node itself)
+print(all_columns) 
+
+number_of_rows = [2 ** len(c) for c in all_columns] # make the  number of rows for the pandas dataframe (2^number of columns)
+print(number_of_rows)
+
+df = pd.DataFrame(index= np.arange(number_of_rows[4]), columns=all_columns[4]) # can change 4 to the variable you want to check, creates df for that var
+print(df)
+
+# checking whether the function creates satisfactory DAGs
+acyclic = create_acyclic_digraph_network_of_size_N(7, 0.5) # 7 nodes and 0.5 probability of making edges between nodes
+nx.draw(acyclic, with_labels = True)
+plt.show()
+
+# checking whether the get_parents functions work properly, also check the data types
+number_of_parents = get_number_of_parents_random_network(acyclic)
+print(number_of_parents)
+which_parents = get_which_parents_random_network(acyclic)
+print(which_parents)
+
+# made a start with getting the correct number of rows based on the variable and correct column order
+This might not be necessary if you can get the parents data in the right structure
+var_3 = which_parents[3]
+cols = var_3[1]
+cols.append(var_3[0])
+rows = 2 ** (len(cols))
+
+#playing around with making truth tables for the dataframe.
+truth_values_1 = []
+for j in range(int(rows / 2)):
+    truth_values_1.append(True)
+for k in range(int(rows/2)):
+    truth_values_1.append(False)
+print(truth_values_1)
+
+#Printing the dataframe to check if the dimensions and columns are correct.
+df = pd.DataFrame(index = np.arange(rows), columns = cols)
+print(df)
+'''
 
 # test maxing out
 '''
@@ -542,14 +676,6 @@ bn_grass = BNReasoner('testing/lecture_example.BIFXML')
 example_cpt = bn_grass.bn.get_cpt('Wet Grass?')
 print(example_cpt)
 bn_grass.summing_out(example_cpt, ['Wet Grass?'])
-'''
-
-# test pruner
-'''
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-bn_grass.bn.draw_structure()
-pruned_bn_grass = bn_grass.pruner({'Winter?', 'Wet Grass?'},{'Sprinkler?'})
-pruned_bn_grass.bn.draw_structure()
 '''
 
 # test JPD^maxing-out
@@ -646,7 +772,7 @@ if __name__ == "__main__":
     cpt_2 = BN.bn.get_cpt("dog-out")
     print('cpt_1:', cpt_1, 'cpt_2:', cpt_2)
     factor_product = BN.multiply_cpts(cpt_1, cpt_2)
-    print('factor_product:', factor_product) 
+    print('factor_product:', factor_product)
     '''
 
     # test d-separation
@@ -655,7 +781,8 @@ if __name__ == "__main__":
     BN = BayesNet()
     network = BN.load_from_bifxml('testing/dog_problem.BIFXML')
     BN.draw_structure()
-    test = reasoner.d_separation(network, 'family-out', 'hear-bark', ['dog-out'])
+    test = reasoner.d_separation(
+        network, 'family-out', 'hear-bark', ['dog-out'])
     print(test)
 
     # test = reasoner.d_separation(network, 'dog-out', 'light-on', ['dog-out'])
