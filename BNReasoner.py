@@ -411,6 +411,8 @@ class BNReasoner:
 
         # take max p value for remaining rows if they are similar
         PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
+        PD_new.reset_index(inplace=True)
+
         # print(PD_new)
         return PD_new
 
