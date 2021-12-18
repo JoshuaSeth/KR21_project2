@@ -466,138 +466,90 @@ class BNReasoner:
                 cpt = cpt.loc[cpt[var] == value]
         return cpt
 
-    def MPE(self, evidence: list, elimination_order) -> dict:
+    def MPE(self, evidence: list, order_function=None):
         """
-        Returns the most probable explanation for the evidence
-
-        Takes evidence as input and returns the most probable explanation for the evidence as an instantiation
+        
         """
-        evidence_vars = [var for (var, _) in evidence]
-
-        # prune network
-        pruned_network = self.pruner([], evidence_vars)
-
+        pruned_network = self.pruner([], evidence)
+        
         # get al variables
         vars = pruned_network.get_all_variables()
 
         # get elimination order
-        elimination_order = list(elimination_order(vars))
+        if order_function is None:
+            print("No elimination order given, using random order")
+            order_function = self.random_ordening
+        elimination_order = list(order_function(vars))
 
-        # condition all CPTs
-        cpts = [self.condition(cpt, evidence)
-                for cpt in pruned_network.get_all_cpts().values()]
+        # get and condition cpts
+        cpts = pruned_network.get_all_cpts()
+        for (var, cpt) in cpts.items():
+            cpts[var] = self.condition(cpt, evidence)
 
-        for i in range(len(vars)):
-            var = elimination_order[i]
-            cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
-            if len(cpts_with_var) > 0:
-                product = cpts_with_var[0]
-                for cpt in cpts_with_var[1:]:
-                    product = self.multiply_cpts(product, cpt)
+        for var in elimination_order:
+            # get all cpts in where var occurs
+            fks = [key for key, cpt in cpts.items() if var in cpt.columns]
+            fks_cpt = [cpts[key] for key in fks]
+        
+            # calc product of cpts
+            f = fks_cpt[0]
+            for cpt in fks_cpt[1:]:
+                f = self.multiply_cpts(f, cpt)
 
-                # max over var
-                if len(product.columns) > 2:
-                    max = self.maxing_out(product, [var])
-                else:
-                    max = product
+            # max out
+            f = self.maxing_out(f, [var])
 
-                # replace factors in cpts with max
-                new_cpts = []
-                for cpt in cpts:
-                    for cpt_with_var in cpts_with_var:
-                        if not cpt.equals(cpt_with_var):
-                            new_cpts.append(cpt)
-
-                cpts = new_cpts
-                cpts.append(max)
-                print(len(cpts))
-
-                result = cpts[0]
-                for cpt in cpts[1:]:
-                    if not result.equals(cpt):
-                        print(f'------------------\n{result}\n\n{cpt}\n------------------')
-                        result = self.multiply_cpts(result, cpt)
-
-        return result
-
-    def MAP(self, M: list, evidence: list, elimination_order):
-        """
-        Returns the 'most a posteriori estimate' for the given variables and evidence
-        """
-        # prune network
-        pruned_network = self.pruner(M, evidence)
-
-        # get al variables
-        vars = [var for var in pruned_network.get_all_variables()
-                if var not in M]
-
-        # get elimination order
-        elimination_order = list(elimination_order(
-            vars)) + list(elimination_order(M))
-
-        # get all factors
-        cpts = [self.condition(cpt, evidence)
-                for cpt in pruned_network.get_all_cpts().values()]
-
-        for i in range(len(vars)):
-            # calc product over relevant factors
-            var = elimination_order[i]
-            cpts_with_var = [cpt for cpt in cpts if var in cpt.columns]
-            for cpt in cpts_with_var:
-                print(f'-------------------\n{cpt}\n-------------------')
-            product = cpts_with_var[0]
-            for cpt in cpts_with_var[1:]:
-                print('.')
-                product = self.multiply_cpts(product, cpt)
-
-            # replace relevant factors with max or sum
-            if var in M:
-                factor = self.maxing_out(product)
-            else:
-                factor = self.summing_out(product)
-            for i in range(len(cpts)):
-                if cpts[i] in cpts_with_var:
-                    cpts[i] = factor
+            # replace cpts
+            for key in fks:
+                cpts.pop(key)
+            cpts['+'.join(fks)] = f
 
         return cpts
-    
-def create_acyclic_digraph_network_of_size_N(N:int, prob_edges:float): # can adjust number of nodes with N and number of edges with prob_edges(>=0 and =<1)
-    cyclic_network = nx.gnp_random_graph(N, prob_edges, directed=True)
-    acyclic_network = nx.DiGraph([(u,v,{'weight':random.randint(-10,10)}) for (u,v) in cyclic_network.edges() if u<v])
-    return acyclic_network
-    # returns a DAG
-
-def get_number_of_parents_random_network(network):
-    all_nodes = list(network.nodes)
-    all_nodes.sort()
-    all_parents = []
-    for node in all_nodes:
-        parents = [c for c in network.predecessors(node)]
-        all_parents.append(len(parents))
-    return list(zip(all_nodes, all_parents)) 
-    # this returns a list with tuples, where in the tuple (2, 4) the 2 is the variable and the 4 is the number of parents that 2 has.
-
-def get_which_parents_random_network(network):
-    all_nodes = list(network.nodes)
-    all_nodes.sort()
-    all_parents = []
-    for node in all_nodes:
-        parents = [c for c in network.predecessors(node)]
-        all_parents.append(parents)
-    return list(zip(all_nodes, all_parents)) # might want to change list to dict here, i can imagine that's easier for the dataframe
-    # this returns a list with tuples, where in the tuple (0, [1,2]) the 0 is the variable and the list[1,2] are the parents of 0
 
 
-# test pruner
-check_var = 'Winter?'
+    def MAP(self, query: list, evidence: list, order_function=None):
+        """
+        
+        """
+        pruned_network = self.pruner([], evidence)
+        
+        # get al variables
+        vars = pruned_network.get_all_variables()
 
-bn_grass = BNReasoner('testing/lecture_example.BIFXML')
-#bn_grass.bn.draw_structure()
-print('BEFORE')
-print(bn_grass.bn.get_all_cpts())
-pruned_bn_grass = bn_grass.pruner({'Wet Grass?'},{('Winter?', True), ('Rain?', False)})
-print('AFTRER')
-print(pruned_bn_grass.bn.get_all_cpts())
+        # get elimination order
+        if order_function is None:
+            print("No elimination order given, using random order")
+            order_function = self.random_ordening
+        elimination_order = list(order_function([var for var in vars if var not in query]))
+        elimination_order = elimination_order + list(order_function(query))
+
+        # get and condition cpts
+        cpts = pruned_network.get_all_cpts()
+        for (var, cpt) in cpts.items():
+            cpts[var] = self.condition(cpt, evidence)
+
+        for var in elimination_order:
+            # get all cpts in where var occurs
+            fks = [key for key, cpt in cpts.items() if var in cpt.columns]
+            fks_cpt = [cpts[key] for key in fks]
+
+            # calc product of cpts
+            f = fks_cpt[0]
+            for cpt in fks_cpt[1:]:
+                f = self.multiply_cpts(f, cpt)
+
+            # max or sum out
+            if var in query:
+                f = self.maxing_out(f, [var])
+            else:
+                f = self.summing_out(f, [var])
+
+            # replace cpts
+            for key in fks:
+                cpts.pop(key)
+            cpts['+'.join(fks)] = f
+
+        return cpts       
 
 
 # test random network generator 
