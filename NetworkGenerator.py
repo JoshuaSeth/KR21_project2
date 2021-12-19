@@ -8,29 +8,35 @@ class NetworkGenerator:
     def __init__(self):
         pass
 
+
     def generate_network(self, network_size: int) -> BayesNet:
-        """
-        Generates a random BayesNet with the given network_size.
-        """
         bn = BayesNet()
 
-        nodes = []
-        for i in range(network_size):
-            n_parents = min(len(nodes), random.randint(1, math.ceil(math.sqrt(network_size))))
-            
-            parents = [node[0] for node in random.sample(nodes, n_parents)]
-            nodes.append((i, parents))
+        variables = []
+        edges = []
+        cpts = {}
 
-        for node in nodes:
-            var = node[0]
-            parents = node[1]
+        for i in range(network_size):
+            # create variable
+            var = str(i)
+
+            # choose parents
+            n_parents = min(len(variables), random.randint(1, math.ceil(math.sqrt(network_size))))
+            parents = [variables[j] for j in random.sample(range(len(variables)), n_parents)]
+            new_edges = [(var, parent) for parent in parents]
+            
+            # create cpt
             cpt = self.generate_cpt(var, parents)
-            bn.add_var(var, cpt)
-            for parent in parents:
-                bn.add_edge((parent, var))
+
+            # store variable, edges and cpt
+            variables.append(var)
+            edges.extend(new_edges)
+            cpts[var] = cpt
+
+        # create network
+        bn.create_bn(variables, edges, cpts)
 
         return bn
-
 
     
     def generate_cpt(self, node: str, parents: list) -> pd.DataFrame:
