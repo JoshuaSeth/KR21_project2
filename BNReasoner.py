@@ -484,7 +484,7 @@ class BNReasoner:
         """
         
         """
-        pruned_network = self.pruner([], [var for (var, _) in evidence])
+        pruned_network = self.pruner([], evidence)
         
         # get al variables
         vars = pruned_network.get_all_variables()
