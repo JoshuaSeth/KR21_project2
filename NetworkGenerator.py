@@ -3,6 +3,7 @@ import pandas as pd
 import random
 
 from BayesNet import BayesNet
+from tqdm import tqdm
 
 class NetworkGenerator:
     def __init__(self):
@@ -16,12 +17,12 @@ class NetworkGenerator:
         edges = []
         cpts = {}
 
-        for i in range(network_size):
+        for i in tqdm(range(network_size)):
             # create variable
             var = str(i)
 
             # choose parents
-            n_parents = min(len(variables), random.randint(1, math.ceil(math.sqrt(network_size))))
+            n_parents = min(len(variables), random.randint(1, 16), math.ceil(math.sqrt(len(variables))))
             parents = [variables[j] for j in random.sample(range(len(variables)), n_parents)]
             new_edges = [(var, parent) for parent in parents]
             
@@ -62,6 +63,5 @@ class NetworkGenerator:
 if __name__ == '__main__':
     ng = NetworkGenerator()
 
-    for i in range(5):
-        bn = ng.generate_network(10)
-        bn.draw_structure()
+    bn = ng.generate_network(100)
+    bn.draw_structure()
