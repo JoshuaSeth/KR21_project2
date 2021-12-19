@@ -443,9 +443,12 @@ class BNReasoner:
         # get the variables still present in the table
         remaining_variables = list(cpt.columns.values)[:-1]
 
-        # take max p value for remaining rows if they are similar
-        PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
-        PD_new.reset_index(inplace=True)
+        if len(remaining_variables) > 0:
+            # take max p value for remaining rows if they are similar
+            PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
+            PD_new.reset_index(inplace=True)
+        else:
+            PD_new = cpt[cpt.p == cpt.p.max()]
 
         # print(PD_new)
         return PD_new
@@ -551,5 +554,30 @@ class BNReasoner:
             cpts['+'.join(fks)] = f
 
         return cpts       
+
+
+    def maxxing(self, cpt: pd.DataFrame, Z_names: list):
+        # create maxf(X), Y
+        factor_x = cpt['p']
+        Y = cpt.drop([*Z_names, 'p'], axis=1)
+
+        marg = {}
+        for index, row in Y.iterrows():
+            if tuple(row.values) not in marg:
+                marg[tuple(row.values)] = [factor_x[index]]
+            else:
+                marg[tuple(row.values)].append(factor_x[index])
+
+        max_cpt = pd.DataFrame(columns=[*list(Y.columns),'p'])
+        for key in marg:
+            new_row = {}
+            for i, var in enumerate([y for y in Y.columns]):
+                new_row[var] = key[i]
+            new_row['p'] = max(marg[key])
+            nr = [[a for a in new_row.values()]]
+            new_row = pd.DataFrame(nr, columns=list(new_row.keys()))
+            max_cpt = pd.concat([max_cpt, new_row])
+
+        return max_cpt
 
 
