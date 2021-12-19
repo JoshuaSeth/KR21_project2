@@ -228,13 +228,13 @@ class BNReasoner:
         for variable in variables:
             # if variable is not part of the selected variables ...
             if variable not in Q and variable not in E:
-                children = bn.get_children([variable])
+                children = bn.get_children(variable)
                 # ... and has no children, then delete it
                 if not children:
                     bn.del_var(variable)
 
         for evidence in E:
-            children = bn.get_children([evidence[0]])
+            children = bn.get_children(evidence[0])
             for child in children:
                 # delete outgoing edges from E
                 bn.del_edge((evidence[0], child))

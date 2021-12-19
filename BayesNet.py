@@ -77,14 +77,13 @@ class BayesNet:
 
     # METHODS THAT MIGHT ME USEFUL -------------------------------------------------------------------------------------
 
-    def get_children(self, z) -> List[str]:
-        children = []
-        for i in range(len(z)):
-            children_i = [c for c in self.structure.successors(z[i])]
-            children.append(children_i)
-        children = [item for sublist in children for item in sublist]
-        children = list(set(children))
-        return children
+    def get_children(self, variable: str) -> List[str]:
+        """
+        Returns the children of the variable in the graph.
+        :param variable: Variable to get the children from
+        :return: List of children
+        """
+        return [c for c in self.structure.successors(variable)]
 
     def get_parents(self, z) -> List[str]:
         parents = []
