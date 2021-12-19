@@ -401,10 +401,14 @@ class BNReasoner:
 
         return PD_new
 
-    def maxing_out(self, cpt, max_out_variables):
+    def maxing_out(self, cpt, max_out_variables, instantiation={}):
         '''Takes set of variables (given als list of strings) that needs to be
         maxed out as an input and returns table with without given variables
         when applied to a Bayesian Network'''
+
+        # add most likely instantiation to instantiation dict
+        odds = cpt.groupby(max_out_variables).aggregate({'p': 'max'})
+        instantiation[max_out_variables[0]] = odds.index[0]
 
         # delete columns of variables that need to be maxed out
         cpt = cpt.drop(columns=max_out_variables)
@@ -444,6 +448,7 @@ class BNReasoner:
         """
 
         pruned_network = self.pruner([], evidence)
+        instantiation = {}
         
         # get al variables
         vars = pruned_network.get_all_variables()
@@ -470,20 +475,21 @@ class BNReasoner:
                 f = self.multiply_cpts(f, cpt)
 
             # max out
-            f = self.maxing_out(f, [var])
+            f = self.maxing_out(f, [var], instantiation)
 
             # replace cpts
             for key in fks:
                 cpts.pop(key)
             cpts['+'.join(fks)] = f
 
-        return cpts
+        return (cpts, instantiation)
 
 
     def MAP(self, query: list, evidence: list, order_function=None):
         """
         
         """
+        instantiation = {}
         pruned_network = self.pruner([], evidence)
         
         # get al variables
@@ -506,22 +512,25 @@ class BNReasoner:
             fks = [key for key, cpt in cpts.items() if var in cpt.columns]
             fks_cpt = [cpts[key] for key in fks]
 
-            # calc product of cpts
-            f = fks_cpt[0]
-            for cpt in fks_cpt[1:]:
-                f = self.multiply_cpts(f, cpt)
+            if len(fks) > 0:
+                # calc product of cpts
+                f = fks_cpt[0]
+                for cpt in fks_cpt[1:]:
+                    print(f)
+                    print(cpt)
+                    f = self.multiply_cpts(f, cpt)
 
-            # max or sum out
-            if var in query:
-                f = self.maxing_out(f, [var])
-            else:
-                f = self.summing_out(f, [var])
+                # max or sum out
+                if var in query:
+                    f = self.maxing_out(f, [var], instantiation)
+                else:
+                    f = self.summing_out(f, [var])
 
-            # replace cpts
-            for key in fks:
-                cpts.pop(key)
-            cpts['+'.join(fks)] = f
+                # replace cpts
+                for key in fks:
+                    cpts.pop(key)
+                cpts['+'.join(fks)] = f
 
-        return cpts       
+        return (cpts, instantiation)
 
 
