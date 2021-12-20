@@ -1,18 +1,10 @@
-from networkx.algorithms.planarity import check_planarity
-import numpy as np
-import random
-import pandas as pd
-import networkx as nx
-from typing import Union
-from xml.etree.ElementTree import TreeBuilder
-import itertools
-
-from numpy import multiply
+from typing import Dict, List, Tuple, Union
 from BayesNet import BayesNet
-import copy
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-pd.options.mode.chained_assignment = None  # disable bs warnings of Pandas
+from copy import deepcopy
+
+import networkx as nx
+import pandas as pd
+import random
 
 
 class BNReasoner:
@@ -28,6 +20,7 @@ class BNReasoner:
         else:
             self.bn = net
 
+    
     def d_separation(self, network, x, y, z):
         z_parents = self.bn.get_parents(z)
         z_children = self.bn.get_children(z)
@@ -61,107 +54,83 @@ class BNReasoner:
                             nodes_to_visit.append((parents, 'asc'))
         return True
 
-    def is_unique(self, s):
-        '''Quick check if all values in df are equal'''
-        if not isinstance(s, pd.DataFrame):
-            s.to_frame()  # If we got a series object transform it to DF
-        a = s.to_numpy()  # s.values (pandas<0.24)
-        return (a[0] == a).all()
 
-    def multiply_cpts(self, cpt_1, cpt_2):
+    def order_min_degree(self, network: BayesNet) -> List[str]:
         """
-        Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
-        cpt_1 = BN.get_cpt("hear-bark")
-        cpt_2 = BN.get_cpt("dog-out")
-        factor_product = BR.multiply_cpts(cpt_1, cpt_2)
+        Orders nodes by their degree (smallest first)
+
+        Returns a list of nodes (str)
         """
-        # 0. Convert to df's if necessary
-        if not isinstance(cpt_1, pd.DataFrame):
-            cpt_1.to_frame()
-        if not isinstance(cpt_2, pd.DataFrame):
-            cpt_2.to_frame()
+        degrees = network.get_interaction_graph().degree()
+        degrees = sorted(degrees, key=lambda x: x[1])
+        order = [x[0] for x in degrees]
+        return order
 
-        # Reset their indices so we don't have weird errors
-        if pd.Index(np.arange(0, len(cpt_1))).equals(cpt_1.index):
-            cpt_1.reset_index()
-        if pd.Index(np.arange(0, len(cpt_2))).equals(cpt_2.index):
-            cpt_2.reset_index()
 
-        # If there is an index column delete it since it means there is a double index
-        if "index" in list(cpt_1):
-            cpt_1.drop("index", 1, inplace=True)
-        if "index" in list(cpt_2):
-            cpt_2.drop("index", 1, inplace=True)
+    def order_min_fill(self, network: BayesNet) -> List[str]:
+        """
+        Orders nodes such that elimination leads to the fewest new edges
 
-        # 1. get variables that is in 2nd cpt and not in 1st
-        cpt_1_no_p = list(cpt_1)[:-1]
-        vars_to_add = [col for col in list(
-            cpt_2) if col not in cpt_1_no_p]
+        Returns alist of nodes (str)
+        """
+        int_graph = network.get_interaction_graph()
+        new_edges = []
+        for node in int_graph:
+            n = 0
+            neighbors = int_graph.neighbors(node)
+            for n1 in neighbors:
+                for n2 in neighbors:
+                    if n1 == n2:
+                        continue
+                    if n2 not in int_graph.neighbors(n1):
+                        n += 1
+            new_edges.append((node, n))
+        new_edges = sorted(new_edges, key=lambda x: x[1])
+        return [x[0] for x in new_edges]
 
-        # If columns consist of one single equal value the new cpt must be shorter
-        singular_cols = [col for col in list(
-            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
-        singular_cols += [col for col in list(
-            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col not in singular_cols and col != 'p']
-        discount = len(singular_cols)
 
-        # Remebr the only value these cols had: False or True
-        singular_vals = [cpt_1[col].iloc[0] for col in list(
-            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
-        singular_vals += [cpt_2[col].iloc[0] for col in list(
-            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
 
-        # DIT IS GEMARKEERD VOOR RIK (hiervoor moet je waarschinlijk edges voor Node verzamlen bijv. node C heeft edge A en B dan maken we een table ABC )
-        # print(singular_cols, singular_vals)
-        # 2. Construct new CPT with length
-        new_cpt_cols = cpt_1_no_p + vars_to_add  # niet relevant voor Rik
-        # lengte table is 2^3 (a,b,c)
-        new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
-        new_cpt = pd.DataFrame(columns=new_cpt_cols,
-                               index=range(new_cpt_len), dtype=object)  # Hier maak een nieuwe table
+    def order_random(self, network: BayesNet) -> List[str]:
+        """
+        Returns a random order of the nodes
+        """
+        vars = network.get_all_variables()
+        random.shuffle(vars)
+        return vars
 
-        # 3. Fill in CPT with Trues and falses
-        # Hier vul je de kolommon van die nieuwe tabel
-        for i in range(len(new_cpt_cols)-1):
-            # If this was a singular value column
-            if new_cpt_cols[i] in singular_cols:
-                new_cpt.loc[:, list(new_cpt_cols)[
-                    i]] = singular_vals[singular_cols.index(new_cpt_cols[i])]
-                continue
-            rows_to_fill_in = pow(2, len(new_cpt_cols)-2-i)
-            cur_bool = False
-            for j in range(int(new_cpt_len/rows_to_fill_in)):
-                start_i = j * rows_to_fill_in
-                cur_bool = not cur_bool
-                new_cpt[new_cpt_cols[i]][start_i:start_i +
-                                         rows_to_fill_in] = cur_bool
-        # DIT IS GEMARKEERD VOOR RIK
 
-        # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
-        for index, row in new_cpt.iterrows():
-            cols = list(new_cpt)[: -1]
-            p_1 = copy.deepcopy(cpt_1)
-            p_2 = copy.deepcopy(cpt_2)
+    def prune(self, query: List[str], evidence: Dict[str, bool]) -> BayesNet:
+        """
+        """
+        new_bn = deepcopy(self.bn)
 
-            index_1 = 0
-            for col in cols:
-                if col in list(cpt_1):
-                    p_1 = p_1.loc[p_1[col] == row[index_1]]
-                if col in list(cpt_2):
-                    p_2 = p_2.loc[p_2[col] == row[index_1]]
-                index_1 += 1
-            # print(p_1)
-            # print(p_2)
-            result = float(p_1["p"].item()) * float(p_2["p"].item())
-            new_cpt["p"][index] = result
+        # loop until no changes are made
+        changes = True
+        while changes:
+            changes = False
+            # prune leaf nodes that are not in query and evidence
+            for var in new_bn.get_all_variables():
+                if new_bn.get_children(var) == [] and var not in query and var not in evidence:
+                    new_bn.del_var(var)
+                    changes = True
 
-        return new_cpt
+            # remove outgoing edges from nodes in query
+            for evidence_var, assignment in evidence.items():
+                children = new_bn.get_children(evidence_var)
+                if len(children) == 0:
+                    continue
+                changes = True
+                for child in children:
+                    new_bn.del_edge((evidence_var, child))
 
-    # NOTE: This must become boh a-priori and a-posteriori, currently it is a-posteriori
-    # Posterioi is after evidence given, priori is distribution of single variable without evidence
-    # I think I also need to integrate the whole multiplication chain i.e. Right now it just multiplies A and B when those ar ein Q but it needs to multiply the whole chain from the start until arriving at the variable for which we want the marginal distirbution. For example sometimes to get to C you have to do A x B|A x C|B before you arrive at the correct marginal distirbution. Right now this is just B|A x C|B. See video PGM 3 35:52 and 1:20:30
-    # Variable must change Q is variables for which we want marginal distribution E is evidence
-    # Currently it just multiplies tables and Q and marginalizes until ending up with E
+                    # update cpt of child
+                    cpt_child = new_bn.get_cpt(child)
+                    cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence_var] != assignment])
+                    cpt_child = cpt_child.drop(columns=[evidence_var])
+                    new_bn.update_cpt(child, cpt_child)
+        return new_bn
+
+
     def get_marginal_distribution(self, Q, E):
         """
         Returns the conditional probability table for variables in Q with the variables in E marginalized out.
@@ -216,321 +185,184 @@ class BNReasoner:
 
         return end
 
-    def pruner(self, Q, E):
-        ''' Returns pruned network for given variables Q and evidence E, where 
-        evidence is given as a set of tuples of variable and truth value e.g. 
-        {('Rain?', True), (...)}'''
-        # create copy of network to work on
-        bn = copy.deepcopy(self.bn)
-
-        # deleting leaf nodes
-        variables = bn.get_all_variables()
-        for variable in variables:
-            # if variable is not part of the selected variables ...
-            if variable not in Q and variable not in E:
-                children = bn.get_children(variable)
-                # ... and has no children, then delete it
-                if not children:
-                    bn.del_var(variable)
-
-        for evidence in E:
-            children = bn.get_children(evidence[0])
-            for child in children:
-                # delete outgoing edges from E
-                bn.del_edge((evidence[0], child))
-                
-                # update cpt of child
-                cpt_child = bn.get_cpt(child)
-                cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence[0]] != evidence[1]])
-                cpt_child = cpt_child.drop(columns=[evidence[0]])
-                bn.update_cpt(child, cpt_child)
-
-        return bn
-
-    def get_all_paths(self, start_node, end_node):
+    
+    def summing_out(self, cpt: pd.DataFrame, sum_out_variables: List[str], assignment: Dict[str, bool]) -> pd.DataFrame:
         """
-        Returns all paths between nodes
-        """
-        temp_network = copy.deepcopy(self.bn.structure)
-        for edge in temp_network.edges:
-            temp_network.add_edge(edge[1], edge[0])
-        return nx.all_simple_paths(temp_network, source=start_node, target=end_node)
-
-    def triple_active(self, nodes, evidence):
-        for node in nodes:
-            # 1. Determine the relationships
-            other_nodes = [o_node for o_node in nodes if o_node != node]
-            children = self.bn.get_children([node])
-            parents = self.bn.get_parents([node])
-            descendants = nx.descendants(self.bn.structure, node)
-            ancestors = nx.ancestors(self.bn.structure, node)
-
-            # 2. Find out which node is the middle node if causal relationship
-            middle_node = "None yet"
-            for alt_node in nodes:
-                other_nodes_2 = [
-                    o_node for o_node in nodes if o_node != alt_node]
-                if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
-                    middle_node = alt_node
-
-            # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
-            if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
-                return True
-            if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
-                return True
-            if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
-                if middle_node not in evidence:
-                    return True
-            if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
-                if middle_node not in evidence:
-                    return True
-        return False  # If none of the rules made the triple active the triple is false
-
-    def d_separation_alt(self, var_1, var_2, evidence):
-        """
-        Given two variables and evidence returns if it is garantued that they are independent.
-        False means the variables are NOT garantued to independent. True means they are independent.
-
-        Example usage:
-        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
-        print(BR.d-separation_alt(var_1, var_2, evidence))
-        """
-        for path in self.get_all_paths(var_1, var_2):
-            active_path = True
-            triples = [[path[i], path[i+1], path[i+2]]
-                       for i in range(len(path)-2)]
-            for triple in triples:
-                # Single inactive triple makes whole path inactive
-                if not self.triple_active(triple, evidence):
-                    active_path = False
-            if active_path:
-                return False  # indepence NOT garantued if any path active
-        return True  # Indpendence garantued if no path active
-
-    def get_joint_probability_distribution(self):
-        '''Returns full joint probability distribution table when applied to a
-        Bayesian Network'''
-        all_variables = self.bn.get_all_variables()
-        # print(all_variables)
-        final_table = self.bn.get_cpt(all_variables[0])
-        # print(final_table)
-
-        # multiplies all CPT to get a JPD
-        for i in range(1, len(all_variables)):
-            table_i = self.bn.get_cpt(all_variables[i])
-            final_table = self.multiply_cpts(final_table, table_i)
-
-        return final_table
-
-    def JPD_and_summing_out(self, sum_out_variables):
-        '''Takes set of variables that needs to be summed out as an input and
-        returns joint probability distribution table with given variables
-        eliminated when applied to a Bayesian Network'''
-        # get full JPD
-        JPD = self.get_joint_probability_distribution()
-
-        # delete columns of variables that need to be summed out
-        JPD = JPD.drop(columns=list(sum_out_variables))
-
-        # sum up p values of remaining rows if they are similar
-        remaining_columns = list(
-            set(self.bn.get_all_variables()) - set(sum_out_variables))
-        PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'sum'})
-
-        return PD_new
-
-    def summing_out(self, cpt, sum_out_variables):
-        '''Takes set of variables (given als list of strings) that needs to be
+        Takes set of variables (given als list of strings) that needs to be
         summed out as an input and returns table with without given variables
-        when applied to a Bayesian Network'''
-
+        when applied to a Bayesian Network
+        """
         # delete columns of variables that need to be summed out
-        cpt = cpt.drop(columns=sum_out_variables)
+        dropped_cpt = cpt.drop(columns=sum_out_variables)
 
         # get the variables still present in the table
-        remaining_variables = list(cpt.columns.values)[:-1]
+        remaining_variables = list(dropped_cpt.columns.values)[:-1]
+
+        # return trivial factor if no variables left
+        if len(remaining_variables) == 0:
+            return cpt['p'].sum()
 
         # sum up p values if rows are similar
-        PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'sum'})
+        PD_new = dropped_cpt.groupby(remaining_variables).aggregate({'p': 'sum'})
+        PD_new.reset_index(inplace=True)
 
         return PD_new
 
-    def min_degree_ordening(self, X: list) -> dict:
-        all_degrees = []
-        all_degrees = [self.number_of_edges(e) for e in X]
-        dict_of_degrees = dict(zip(X, all_degrees))  # unsorted
-        # lowest values first, for easy of use, can chance to list
-        dict_of_degrees_sorted = dict(
-            sorted(dict_of_degrees.items(), key=lambda item: item[1]))
-        return dict_of_degrees_sorted
-
-    def number_of_edges(self, X: str) -> int:
-        int_graph = self.bn.get_interaction_graph()
-        length = len(int_graph[X])
-        return length
-
-    def min_fill_ordering(self, X: list) -> list:
-        '''Input list of strings'''
-        int_graph = self.bn.get_interaction_graph()
-        num_edges = []
-        for x in X:
-            all_neighbors = list(int_graph.neighbors(x))
-            # might need to change r if large number of connections?
-            all_combinations_of_neighbors = list(
-                itertools.combinations(all_neighbors, r=2))
-            new_edges = [
-                i for i in all_combinations_of_neighbors if i not in int_graph.edges]
-            number_of_new_edges = len(new_edges)
-            num_edges.append(number_of_new_edges)
-        return dict(zip(X, num_edges))  # change to list/dict if necessary
-
-    def JPD_and_maxing_out(self, max_out_variables):
-        '''Takes set of variables that needs to be maxed out as an input and
-        returns joint probability distribution table with given variables
-        eliminated when applied to a Bayesian Network'''
-        # get full JPD
-        JPD = self.get_joint_probability_distribution()
-
-        # delete columns of variables that need to be maxed out
-        JPD = JPD.drop(columns=list(max_out_variables))
-
-        # take max p value for remaining rows if they are similar
-        remaining_columns = list(
-            set(self.bn.get_all_variables()) - set(max_out_variables))
-        PD_new = JPD.groupby(remaining_columns).aggregate({'p': 'max'})
-
-        return PD_new
-
-    def maxing_out(self, cpt, max_out_variables, instantiation={}):
-        '''Takes set of variables (given als list of strings) that needs to be
+    
+    def maxing_out(self, cpt: pd.DataFrame, max_out_variables: List[str], assignment: Dict[str, bool]) -> pd.DataFrame:
+        """
+        Takes set of variables (given als list of strings) that needs to be
         maxed out as an input and returns table with without given variables
-        when applied to a Bayesian Network'''
-
-        # add most likely instantiation to instantiation dict
-        odds = cpt.groupby(max_out_variables).aggregate({'p': 'max'})
-        instantiation[max_out_variables[0]] = odds.index[0]
-
+        when applied to a Bayesian Network
+        """
         # delete columns of variables that need to be maxed out
-        cpt = cpt.drop(columns=max_out_variables)
+        dropped_cpt = cpt.drop(columns=max_out_variables)
 
         # get the variables still present in the table
-        remaining_variables = list(cpt.columns.values)[:-1]
+        remaining_variables = list(dropped_cpt.columns.values)[:-1]
 
-        if len(remaining_variables) > 0:
-            # take max p value for remaining rows if they are similar
-            PD_new = cpt.groupby(remaining_variables).aggregate({'p': 'max'})
-            PD_new.reset_index(inplace=True)
-        else:
-            PD_new = cpt[cpt.p == cpt.p.max()]
-
-        # print(PD_new)
+        # return assignment if no variables left
+        if len(remaining_variables) == 0:
+            max_id = cpt['p'].idxmax()
+            for var in cpt.columns.values[:-1]:
+                assignment[var] = cpt[var][max_id]
+            return None
+                
+        # take max p value for remaining rows if they are similar
+        PD_new = dropped_cpt.groupby(remaining_variables).aggregate({'p': 'max'})
+        PD_new.reset_index(inplace=True)
         return PD_new
 
-    def random_ordening(self, vars: list) -> list:
+    
+    def multiply_factors(self, cpt1: pd.DataFrame, cpt2: pd.DataFrame) -> pd.DataFrame:
         """
-        Returns a shuffled list of variables
         """
-        random.shuffle(vars)
-        return vars
+        # Make sure cpt1 has the most columns
+        if len(cpt2.columns) > len(cpt1.columns):
+            cpt1, cpt2 = cpt2, cpt1
 
-    def condition(self, cpt: pd.DataFrame, evidence: list):
+        # Multiply the two CPTs
+        for var in cpt2.columns[:-1]:
+            if var not in cpt1.columns:
+                continue
+            for _, row2 in cpt2.iterrows():
+                t_value = row2[var]
+                for i, row1 in cpt1.iterrows():
+                    if row1[var] == t_value:
+                        cpt1.at[i, 'p'] *= row2['p']
+                
+                #indices = cpt1[var] == t_value
+                #cpt1.loc[cpt1[var] == t_value, 'p'] *= row['p']
+
+        return cpt1
+
+    
+    def multiply_n_factors(self, cpts: List[pd.DataFrame]) -> pd.DataFrame:
+        """
+        """
+        if len(cpts) > 1:
+            result = cpts[0]
+            for cpt in cpts[1:]:
+                result = self.multiply_factors(result, cpt)
+        else:
+            result = cpts[0]
+        return result
+
+
+    def condition(self, cpt: pd.DataFrame, evidence: Dict[str, bool]) -> pd.DataFrame:
         """
         Given a CPT and evidence, returns a conditioned CPT
         """
-        for (var, value) in evidence:
+        for (var, value) in evidence.items():
             if var in cpt.columns:
                 cpt = cpt.loc[cpt[var] == value]
         return cpt
 
-    def MPE(self, evidence: list, order_function=None):
-        """
-        
-        """
 
-        pruned_network = self.pruner([], evidence)
-        instantiation = {}
-        
-        # get al variables
-        vars = pruned_network.get_all_variables()
+    def MPE(self, evidence: Dict[str, bool], order_function=order_random):
+        """
+        """
+        pruned_network = self.prune([], evidence)
+        assignment = dict()
 
         # get elimination order
-        if order_function is None:
-            print("No elimination order given, using random order")
-            order_function = self.random_ordening
-        elimination_order = list(order_function(vars))
+        if order_function in [self.order_random, self.order_min_degree, self.order_min_fill]:
+            elimination_order = order_function(pruned_network)
+        else:
+            return "Error: order_function not recognized"
 
         # get and condition cpts
-        cpts = pruned_network.get_all_cpts()
-        for (var, cpt) in cpts.items():
+        cpts = dict()
+        for var, cpt in pruned_network.get_all_cpts().items():
             cpts[var] = self.condition(cpt, evidence)
 
         for var in elimination_order:
-            # get all cpts in where var occurs
+            # get all cpts in which var occurs
             fks = [key for key, cpt in cpts.items() if var in cpt.columns]
             fks_cpt = [cpts[key] for key in fks]
-        
-            # calc product of cpts
-            f = fks_cpt[0]
-            for cpt in fks_cpt[1:]:
-                f = self.multiply_cpts(f, cpt)
 
-            # max out
-            f = self.maxing_out(f, [var], instantiation)
+            if len(fks) == 0:
+                continue
+            # calc product of cpts
+            f = self.multiply_n_factors(fks_cpt)
+
+            # max out f
+            fi = self.maxing_out(f, [var], assignment)
 
             # replace cpts
             for key in fks:
                 cpts.pop(key)
-            cpts['+'.join(fks)] = f
+            if fi is not None:
+                cpts['+'.join(fks)] = fi
 
-        return (cpts, instantiation)
+        return assignment
 
 
-    def MAP(self, query: list, evidence: list, order_function=None):
+    def MAP(self, query: List[str], evidence: Dict[str, bool], order_function=order_random):
         """
-        
         """
-        instantiation = {}
-        pruned_network = self.pruner([], evidence)
-        
-        # get al variables
-        vars = pruned_network.get_all_variables()
+        pruned_network = self.prune(query, evidence)
+        assignment = dict()
 
         # get elimination order
-        if order_function is None:
-            print("No elimination order given, using random order")
-            order_function = self.random_ordening
-        elimination_order = list(order_function([var for var in vars if var not in query]))
-        elimination_order = elimination_order + list(order_function(query))
+        if order_function in [self.order_random, self.order_min_degree, self.order_min_fill]:
+            temp_elimination_order = order_function(pruned_network)
+            elimination_order_1 = [x for x in temp_elimination_order if x not in query]
+            elimination_order_2 = [x for x in temp_elimination_order if x in query]
+            elimination_order = elimination_order_1 + elimination_order_2
+        else:
+            return "Error: order_function not recognized"
 
         # get and condition cpts
-        cpts = pruned_network.get_all_cpts()
-        for (var, cpt) in cpts.items():
+        cpts = dict()
+        for var, cpt in pruned_network.get_all_cpts().items():
             cpts[var] = self.condition(cpt, evidence)
 
         for var in elimination_order:
-            # get all cpts in where var occurs
+            # get all cpts in which var occurs
             fks = [key for key, cpt in cpts.items() if var in cpt.columns]
             fks_cpt = [cpts[key] for key in fks]
 
-            if len(fks) > 0:
-                # calc product of cpts
-                f = fks_cpt[0]
-                for cpt in fks_cpt[1:]:
-                    print(f)
-                    print(cpt)
-                    f = self.multiply_cpts(f, cpt)
+            if len(fks) == 0:
+                continue
+            # calc product of cpts
+            f = self.multiply_n_factors(fks_cpt)
 
-                # max or sum out
-                if var in query:
-                    f = self.maxing_out(f, [var], instantiation)
-                else:
-                    f = self.summing_out(f, [var])
+            if var in query:
+                # max out f
+                fi = self.maxing_out(f, [var], assignment)
+            else:
+                # sum out f
+                fi = self.summing_out(f, [var], assignment)
 
-                # replace cpts
-                for key in fks:
-                    cpts.pop(key)
-                cpts['+'.join(fks)] = f
+            # replace cpts
+            for key in fks:
+                cpts.pop(key)
+            if fi is not None:
+                cpts['+'.join(fks)] = fi
 
-        return (cpts, instantiation)
+        return assignment
 
+
+        
 

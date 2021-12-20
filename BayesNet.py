@@ -37,7 +37,6 @@ class BayesNet:
         """
         Load a BayesNet from a file in BIFXML file format. See description of BIFXML here:
         http://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
-
         :param file_path: Path to the BIFXML file.
         """
         # Read and parse the bifxml file
@@ -85,16 +84,6 @@ class BayesNet:
         """
         return [c for c in self.structure.successors(variable)]
 
-    def get_parents(self, z) -> List[str]:
-        parents = []
-        for i in range(len(z)):
-            parent_i = [c for c in self.structure.predecessors(z[i])]
-            parents.append(parent_i)
-        parents = [item for sublist in parents for item in sublist]
-        #removing duplicates if they are present from this list
-        parents = list(set(parents))
-        return parents
-        
     def get_cpt(self, variable: str) -> pd.DataFrame:
         """
         Returns the conditional probability table of a variable in the BN.
@@ -146,8 +135,7 @@ class BayesNet:
     def get_compatible_instantiations_table(instantiation: pd.Series, cpt: pd.DataFrame):
         """
         Get all the entries of a CPT which are compatible with the instantiation.
-
-        :param instantiation: a series of assignments as tuples. E.g.: pd.Series(("A", True), ("B", False))
+        :param instantiation: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param cpt: cpt to be filtered
         :return: table with compatible instantiations and their probability value
         """
@@ -171,8 +159,7 @@ class BayesNet:
         """
         Creates and returns a new factor in which all probabilities which are incompatible with the instantiation
         passed to the method to 0.
-
-        :param instantiation: a series of assignments as tuples. E.g.: pd.Series({"A", True}, {"B", False})
+        :param instantiation: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param cpt: cpt to be reduced
         :return: cpt with their original probability value and zero probability for incompatible instantiations
         """
