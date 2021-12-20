@@ -1,14 +1,15 @@
 from typing import Dict, List, Tuple, Union
 from BayesNet import BayesNet
-from copy import deepcopy
+from copy import copy, deepcopy
 
+import logging
 import networkx as nx
 import pandas as pd
 import random
 
 
 class BNReasoner:
-    def __init__(self, net: Union[str, BayesNet]):
+    def __init__(self, net: Union[str, BayesNet], log_level=logging.CRITICAL):
         """
         :param net: either file path of the bayesian network in BIFXML format or BayesNet object
         """
@@ -19,6 +20,9 @@ class BNReasoner:
             self.bn.load_from_bifxml(net)
         else:
             self.bn = net
+
+        # init logger
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
 
     
     def d_separation(self, network, x, y, z):
@@ -114,20 +118,22 @@ class BNReasoner:
                     new_bn.del_var(var)
                     changes = True
 
-            # remove outgoing edges from nodes in query
+            
+            cpts = new_bn.get_all_cpts()
             for evidence_var, assignment in evidence.items():
-                children = new_bn.get_children(evidence_var)
-                if len(children) == 0:
-                    continue
-                changes = True
-                for child in children:
+                # update cpts
+                for variable in new_bn.get_all_variables():
+                    cpt = cpts[variable]
+                    if evidence_var not in cpt.columns:
+                        continue
+                    drop_indices = cpt[cpt[evidence_var] != assignment].index
+                    new_cpt = cpt.drop(drop_indices)
+                    new_bn.update_cpt(variable, new_cpt)
+                # remove outgoing edges from nodes in evidence
+                for child in new_bn.get_children(evidence_var):
+                    changes = True
                     new_bn.del_edge((evidence_var, child))
 
-                    # update cpt of child
-                    cpt_child = new_bn.get_cpt(child)
-                    cpt_child = cpt_child.drop(cpt_child.index[cpt_child[evidence_var] != assignment])
-                    cpt_child = cpt_child.drop(columns=[evidence_var])
-                    new_bn.update_cpt(child, cpt_child)
         return new_bn
 
 
@@ -282,31 +288,41 @@ class BNReasoner:
     def MPE(self, evidence: Dict[str, bool], order_function=order_random):
         """
         """
+        logging.info('Starting MPE')
+        logging.info('Starting pruning')
         pruned_network = self.prune([], evidence)
         assignment = dict()
 
+        
         # get elimination order
+        logging.info('Getting elimination order')
         if order_function in [self.order_random, self.order_min_degree, self.order_min_fill]:
             elimination_order = order_function(pruned_network)
         else:
             return "Error: order_function not recognized"
 
         # get and condition cpts
+        logging.info('Getting and conditioning CPTs')
         cpts = dict()
         for var, cpt in pruned_network.get_all_cpts().items():
             cpts[var] = self.condition(cpt, evidence)
 
+        logging.info('Starting inference')
         for var in elimination_order:
+            logging.info(f'Inference on var: {var}')
             # get all cpts in which var occurs
+            logging.info(f'    Getting relevant CPTs')
             fks = [key for key, cpt in cpts.items() if var in cpt.columns]
             fks_cpt = [cpts[key] for key in fks]
 
             if len(fks) == 0:
                 continue
             # calc product of cpts
+            logging.info(f'    Multiplying CPTs')
             f = self.multiply_n_factors(fks_cpt)
 
             # max out f
+            logging.info(f'    Maxing out CPT')
             fi = self.maxing_out(f, [var], assignment)
 
             # replace cpts
