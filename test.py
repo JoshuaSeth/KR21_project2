@@ -1,5 +1,5 @@
-from new_BayesNet import BayesNet
-from new_BNReasoner import BNReasoner
+from BayesNet import BayesNet
+from BNReasoner import BNReasoner
 
 if __name__ == '__main__':
     bn = BayesNet()
