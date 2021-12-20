@@ -3,7 +3,6 @@ import pandas as pd
 import random
 
 from BayesNet import BayesNet
-from tqdm import tqdm
 
 class NetworkGenerator:
     def __init__(self):
@@ -17,7 +16,7 @@ class NetworkGenerator:
         edges = []
         cpts = {}
 
-        for i in tqdm(range(network_size)):
+        for i in range(network_size):
             # create variable
             var = str(i)
 
