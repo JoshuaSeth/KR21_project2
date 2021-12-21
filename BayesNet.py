@@ -18,7 +18,7 @@ class BayesNet:
     def create_bn(self, variables: List[str], edges: List[Tuple[str, str]], cpts: Dict[str, pd.DataFrame]) -> None:
         """
         Creates the BN according to the python objects passed in.
-        
+
         :param variables: List of names of the variables.
         :param edges: List of the directed edges.
         :param cpts: Dictionary of conditional probability tables.
@@ -50,7 +50,8 @@ class BayesNet:
         for key, values in bif_reader.get_values().items():
             values = values.transpose().flatten()
             n_vars = int(math.log2(len(values)))
-            worlds = [list(i) for i in itertools.product([False, True], repeat=n_vars)]
+            worlds = [list(i) for i in itertools.product(
+                [False, True], repeat=n_vars)]
             # create empty array
             cpt = []
             # iterating through worlds within a variable
@@ -65,10 +66,10 @@ class BayesNet:
             columns.append(key)
             columns.append('p')
             cpts[key] = pd.DataFrame(cpt, columns=columns)
-        
+
         # load vars
         variables = bif_reader.get_variables()
-        
+
         # load edges
         edges = bif_reader.get_edges()
 
@@ -83,6 +84,16 @@ class BayesNet:
         :return: List of children
         """
         return [c for c in self.structure.successors(variable)]
+
+    def get_parents(self, z) -> List[str]:
+        parents = []
+        for i in range(len(z)):
+            parent_i = [c for c in self.structure.predecessors(z[i])]
+            parents.append(parent_i)
+        parents = [item for sublist in parents for item in sublist]
+        # removing duplicates if they are present from this list
+        parents = list(set(parents))
+        return parents
 
     def get_cpt(self, variable: str) -> pd.DataFrame:
         """
@@ -140,7 +151,8 @@ class BayesNet:
         :return: table with compatible instantiations and their probability value
         """
         var_names = instantiation.index.values
-        var_names = [v for v in var_names if v in cpt.columns]  # get rid of excess variables names
+        # get rid of excess variables names
+        var_names = [v for v in var_names if v in cpt.columns]
         compat_indices = cpt[var_names] == instantiation[var_names].values
         compat_indices = [all(x[1]) for x in compat_indices.iterrows()]
         compat_instances = cpt.loc[compat_indices]
@@ -164,7 +176,8 @@ class BayesNet:
         :return: cpt with their original probability value and zero probability for incompatible instantiations
         """
         var_names = instantiation.index.values
-        var_names = [v for v in var_names if v in cpt.columns]  # get rid of excess variables names
+        # get rid of excess variables names
+        var_names = [v for v in var_names if v in cpt.columns]
         if len(var_names) > 0:  # only reduce the factor if the evidence appears in it
             new_cpt = deepcopy(cpt)
             incompat_indices = cpt[var_names] != instantiation[var_names].values
