@@ -257,10 +257,6 @@ class BNReasoner:
         for j in range(1, len(results)):
             end = self.multiply_cpts_extensive(end, results[j])
 
-        # end = self.bn.get_cpt(Q[0])
-        # for i in range(1, len(Q)):
-        #     end = self.multiply_cpts(end, self.bn.get_cpt(Q[i]))
-        # print(end)
         # Marginalize out the evidence
         for col in list(end)[:-1]:
             # If E is empty this will simply be a-priori distribution

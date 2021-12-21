@@ -20,7 +20,7 @@ print(cpt_2)
 print(BR.multiply_factors(cpt_1, cpt_2))
 BR.bn.draw_structure()
 p = BR.get_marginal_distribution(
-    ["Winter?", "Slippery Road?"], {})
+    ["Winter?", "Slippery Road?"], {"Rain?": True})
 
 print(p)
 
