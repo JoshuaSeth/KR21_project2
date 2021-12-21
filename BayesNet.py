@@ -86,14 +86,7 @@ class BayesNet:
         return [c for c in self.structure.successors(variable)]
 
     def get_parents(self, z) -> List[str]:
-        parents = []
-        for i in range(len(z)):
-            parent_i = [c for c in self.structure.predecessors(z[i])]
-            parents.append(parent_i)
-        parents = [item for sublist in parents for item in sublist]
-        # removing duplicates if they are present from this list
-        parents = list(set(parents))
-        return parents
+        return [c for c in self.structure.successors(z)]
 
     def get_cpt(self, variable: str) -> pd.DataFrame:
         """
