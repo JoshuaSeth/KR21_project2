@@ -245,7 +245,7 @@ class BNReasoner:
         """
         Returns all paths between nodes
         """
-        temp_network = copy.deepcopy(self.bn.structure)
+        temp_network = deepcopy(self.bn.structure)
         for edge in temp_network.edges:
             temp_network.add_edge(edge[1], edge[0])
         return nx.all_simple_paths(temp_network, source=start_node, target=end_node)
@@ -254,8 +254,8 @@ class BNReasoner:
         for node in nodes:
             # 1. Determine the relationships
             other_nodes = [o_node for o_node in nodes if o_node != node]
-            children = self.bn.get_children([node])
-            parents = self.bn.get_parents([node])
+            children = self.bn.get_children(node)
+            parents = self.bn.get_parents(node)
             descendants = nx.descendants(self.bn.structure, node)
             ancestors = nx.ancestors(self.bn.structure, node)
 
@@ -264,7 +264,7 @@ class BNReasoner:
             for alt_node in nodes:
                 other_nodes_2 = [
                     o_node for o_node in nodes if o_node != alt_node]
-                if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
+                if (other_nodes_2[0] in self.bn.get_parents(alt_node) and other_nodes_2[1] in self.bn.get_children(alt_node)) or (other_nodes_2[1] in self.bn.get_parents(alt_node) and other_nodes_2[0] in self.bn.get_children(alt_node)):
                     middle_node = alt_node
 
             # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
@@ -280,7 +280,7 @@ class BNReasoner:
                     return True
         return False  # If none of the rules made the triple active the triple is false
 
-    def d_separation_alt(self, var_1, var_2, evidence):
+    def d_separation(self, var_1, var_2, evidence):
         """
         Given two variables and evidence returns if it is garantued that they are independent.
         False means the variables are NOT garantued to independent. True means they are independent.

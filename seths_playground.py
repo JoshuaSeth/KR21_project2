@@ -19,10 +19,13 @@ BR = BNReasoner(BN)
 # print(cpt_2)
 # print(BR.multiply_factors(cpt_1, cpt_2))
 BR.bn.draw_structure()
-p = BR.get_marginal_distribution(
-    ["Winter?", "Slippery Road?"], {"Rain?": True})
+# p = BR.get_marginal_distribution(
+#     ["Winter?", "Slippery Road?"], {"Rain?": True})
 
-print(p)
+# print(p)
+
+print(BR.d_separation("Cardiovascular_disease",
+      "Chronic_lung_disease", ["Decreased_mental_alertness"]))
 
 # cpt_3 = BR.bn.get_cpt("Wet Grass?")
 # cpt_1 = cpt_1.drop([0])
