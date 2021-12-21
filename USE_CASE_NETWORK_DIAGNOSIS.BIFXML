@@ -120,17 +120,17 @@
 <!-- Probability distributions -->
 <DEFINITION>
 	<FOR>Smoker</FOR>
-	<TABLE>0.19 0.81 </TABLE>
+	<TABLE>0.81 0.19 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
 	<FOR>Obesity</FOR>
-	<TABLE>0.181 0.819 </TABLE>
+	<TABLE>0.819 0.181 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
 	<FOR>older_than_65</FOR>
-	<TABLE>0.2 0.8 </TABLE>
+	<TABLE>0.8 0.2 </TABLE>
 </DEFINITION>
 
 <DEFINITION>
