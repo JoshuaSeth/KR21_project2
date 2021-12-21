@@ -6,6 +6,7 @@ import logging
 import networkx as nx
 import pandas as pd
 import random
+import numpy as np
 
 
 class BNReasoner:
@@ -129,6 +130,93 @@ class BNReasoner:
                     new_bn.del_edge((evidence_var, child))
 
         return new_bn
+
+    def multiply_cpts_extensive(self, cpt_1, cpt_2):
+        """
+        Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
+        cpt_1 = BN.get_cpt("hear-bark")
+        cpt_2 = BN.get_cpt("dog-out")
+        factor_product = BR.multiply_cpts(cpt_1, cpt_2)
+        """
+        # 0. Convert to df's if necessary
+        if not isinstance(cpt_1, pd.DataFrame):
+            cpt_1.to_frame()
+        if not isinstance(cpt_2, pd.DataFrame):
+            cpt_2.to_frame()
+
+        # Reset their indices so we don't have weird errors
+        if pd.Index(np.arange(0, len(cpt_1))).equals(cpt_1.index):
+            cpt_1.reset_index()
+        if pd.Index(np.arange(0, len(cpt_2))).equals(cpt_2.index):
+            cpt_2.reset_index()
+
+        # If there is an index column delete it since it means there is a double index
+        if "index" in list(cpt_1):
+            cpt_1.drop("index", 1, inplace=True)
+        if "index" in list(cpt_2):
+            cpt_2.drop("index", 1, inplace=True)
+
+        # 1. get variables that is in 2nd cpt and not in 1st
+        cpt_1_no_p = list(cpt_1)[:-1]
+        vars_to_add = [col for col in list(
+            cpt_2) if col not in cpt_1_no_p]
+
+        # If columns consist of one single equal value the new cpt must be shorter
+        singular_cols = [col for col in list(
+            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
+        singular_cols += [col for col in list(
+            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col not in singular_cols and col != 'p']
+        discount = len(singular_cols)
+
+        # Remebr the only value these cols had: False or True
+        singular_vals = [cpt_1[col].iloc[0] for col in list(
+            cpt_1_no_p) if self.is_unique(cpt_1[col]) and col != 'p']
+        singular_vals += [cpt_2[col].iloc[0] for col in list(
+            cpt_2[:-1]) if self.is_unique(cpt_2[col]) and col != 'p']
+
+        # print(singular_cols, singular_vals)
+        # 2. Construct new CPT
+        new_cpt_cols = cpt_1_no_p + vars_to_add
+        new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
+        new_cpt = pd.DataFrame(columns=new_cpt_cols,
+                               index=range(new_cpt_len), dtype=object)
+
+        # 3. Fill in CPT with Trues and falses
+        for i in range(len(new_cpt_cols)-1):
+            # If this was a singular value column
+            if new_cpt_cols[i] in singular_cols:
+                new_cpt.loc[:, list(new_cpt_cols)[
+                    i]] = singular_vals[singular_cols.index(new_cpt_cols[i])]
+                continue
+            rows_to_fill_in = pow(2, len(new_cpt_cols)-2-i)
+            cur_bool = False
+            for j in range(int(new_cpt_len/rows_to_fill_in)):
+                start_i = j * rows_to_fill_in
+                cur_bool = not cur_bool
+                new_cpt[new_cpt_cols[i]][start_i:start_i +
+                                         rows_to_fill_in] = cur_bool
+        # print("filling in vals")
+        # print(new_cpt)
+
+        # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
+        for index, row in new_cpt.iterrows():
+            cols = list(new_cpt)[: -1]
+            p_1 = copy.deepcopy(cpt_1)
+            p_2 = copy.deepcopy(cpt_2)
+
+            index_1 = 0
+            for col in cols:
+                if col in list(cpt_1):
+                    p_1 = p_1.loc[p_1[col] == row[index_1]]
+                if col in list(cpt_2):
+                    p_2 = p_2.loc[p_2[col] == row[index_1]]
+                index_1 += 1
+            # print(p_1)
+            # print(p_2)
+            result = float(p_1["p"].item()) * float(p_2["p"].item())
+            new_cpt["p"][index] = result
+
+        return new_cpt
 
     def get_marginal_distribution(self, Q, E):
         """
