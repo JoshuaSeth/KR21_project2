@@ -26,39 +26,6 @@ class BNReasoner:
         logging.basicConfig(
             format='%(levelname)s: %(message)s', level=log_level)
 
-    def d_separation(self, network, x, y, z):
-        z_parents = self.bn.get_parents(z)
-        z_children = self.bn.get_children(z)
-        # print(z_children)
-        # print(z_parents)
-        nodes_to_visit = [(x, 'asc')]
-        already_visited = set()
-        nodes = set(self.bn.get_all_variables())
-
-        while nodes_to_visit:
-            (node_name, up_or_down) = nodes_to_visit.pop()
-
-            # if current visiting node is not already_visited, skip it
-            if (node_name, up_or_down) not in already_visited:
-                already_visited.add((node_name, up_or_down))
-
-                if node_name not in z and node_name == y:  # if we reach the end, no d-separation
-                    return False
-
-                if up_or_down == 'asc' and node_name not in z:
-                    for parent in z_parents:
-                        nodes_to_visit.append((parent, 'asc'))
-                    for child in z_children:
-                        nodes_to_visit.append((child, 'des'))
-                elif up_or_down == 'des':
-                    if node_name not in z:
-                        for child in z_children:
-                            nodes_to_visit.append((child, 'des'))
-                    if node_name in z or node_name in z_parents:
-                        for parents in z_parents:
-                            nodes_to_visit.append((parents, 'asc'))
-        return True
-
     def order_min_degree(self, network: BayesNet) -> List[str]:
         """
         Orders nodes by their degree (smallest first)
@@ -273,6 +240,65 @@ class BNReasoner:
                     {'p': 'sum'}).reset_index()  # Now group other cols (with only relevant p's)
 
         return end
+
+    def get_all_paths(self, start_node, end_node):
+        """
+        Returns all paths between nodes
+        """
+        temp_network = copy.deepcopy(self.bn.structure)
+        for edge in temp_network.edges:
+            temp_network.add_edge(edge[1], edge[0])
+        return nx.all_simple_paths(temp_network, source=start_node, target=end_node)
+
+    def triple_active(self, nodes, evidence):
+        for node in nodes:
+            # 1. Determine the relationships
+            other_nodes = [o_node for o_node in nodes if o_node != node]
+            children = self.bn.get_children([node])
+            parents = self.bn.get_parents([node])
+            descendants = nx.descendants(self.bn.structure, node)
+            ancestors = nx.ancestors(self.bn.structure, node)
+
+            # 2. Find out which node is the middle node if causal relationship
+            middle_node = "None yet"
+            for alt_node in nodes:
+                other_nodes_2 = [
+                    o_node for o_node in nodes if o_node != alt_node]
+                if (other_nodes_2[0] in self.bn.get_parents([alt_node]) and other_nodes_2[1] in self.bn.get_children([alt_node])) or (other_nodes_2[1] in self.bn.get_parents([alt_node]) and other_nodes_2[0] in self.bn.get_children([alt_node])):
+                    middle_node = alt_node
+
+            # 3. Check the 4 rules, x->y->z, x<-y<-z, x<-y->z, x->y<-z
+            if set(other_nodes).issubset(parents) and node in evidence:  # V-structure
+                return True
+            if set(other_nodes).issubset(children) and node not in evidence:  # COmmon cause
+                return True
+            if not set(other_nodes).issubset(children) and set(other_nodes).issubset(descendants):  # Causal
+                if middle_node not in evidence:
+                    return True
+            if not set(other_nodes).issubset(parents) and set(other_nodes).issubset(ancestors) and node not in evidence:  # Inverse-causal
+                if middle_node not in evidence:
+                    return True
+        return False  # If none of the rules made the triple active the triple is false
+
+    def d_separation_alt(self, var_1, var_2, evidence):
+        """
+        Given two variables and evidence returns if it is garantued that they are independent.
+        False means the variables are NOT garantued to independent. True means they are independent.
+        Example usage:
+        var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
+        print(BR.d-separation_alt(var_1, var_2, evidence))
+        """
+        for path in self.get_all_paths(var_1, var_2):
+            active_path = True
+            triples = [[path[i], path[i+1], path[i+2]]
+                       for i in range(len(path)-2)]
+            for triple in triples:
+                # Single inactive triple makes whole path inactive
+                if not self.triple_active(triple, evidence):
+                    active_path = False
+            if active_path:
+                return False  # indepence NOT garantued if any path active
+        return True  # Indpendence garantued if no path active
 
     def summing_out(self, cpt: pd.DataFrame, sum_out_variables: List[str], assignment: Dict[str, bool]) -> pd.DataFrame:
         """

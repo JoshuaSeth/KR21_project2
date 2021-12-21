@@ -7,17 +7,17 @@ from BNReasoner import BNReasoner
 import networkx as nx
 
 BN = BayesNet()
-BN.load_from_bifxml('testing/lecture_example.BIFXML')
+BN.load_from_bifxml('USE_CASE_NETWORK_DIAGNOSIS.BIFXML')
 BR = BNReasoner(BN)
 
 
 # var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
 
 
-cpt_1 = BR.bn.get_cpt("Winter?")
-cpt_2 = BR.bn.get_cpt("Slippery Road?")
-print(cpt_2)
-print(BR.multiply_factors(cpt_1, cpt_2))
+# cpt_1 = BR.bn.get_cpt("Winter?")
+# cpt_2 = BR.bn.get_cpt("Slippery Road?")
+# print(cpt_2)
+# print(BR.multiply_factors(cpt_1, cpt_2))
 BR.bn.draw_structure()
 p = BR.get_marginal_distribution(
     ["Winter?", "Slippery Road?"], {"Rain?": True})
