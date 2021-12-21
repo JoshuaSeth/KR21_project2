@@ -131,6 +131,13 @@ class BNReasoner:
 
         return new_bn
 
+    def is_unique(self, s):
+        '''Quick check if all values in df are equal'''
+        if not isinstance(s, pd.DataFrame):
+            s.to_frame()  # If we got a series object transform it to DF
+        a = s.to_numpy()  # s.values (pandas<0.24)
+        return (a[0] == a).all()
+
     def multiply_cpts_extensive(self, cpt_1, cpt_2):
         """
         Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
@@ -241,14 +248,14 @@ class BNReasoner:
                 ancestor = ancestors[i]
 
                 # And multiply with the next
-                current_table = self.multiply_factors(
+                current_table = self.multiply_cpts_extensive(
                     current_table, self.bn.get_cpt(ancestor))
             results.append(current_table)
 
         # Then multiply those two final resulting vars in Q
         end = results[0]
         for j in range(1, len(results)):
-            end = self.multiply_factors(end, results[j])
+            end = self.multiply_cpts_extensive(end, results[j])
 
         # end = self.bn.get_cpt(Q[0])
         # for i in range(1, len(Q)):
