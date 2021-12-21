@@ -208,8 +208,8 @@ class BNReasoner:
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
         for index, row in new_cpt.iterrows():
             cols = list(new_cpt)[: -1]
-            p_1 = copy.deepcopy(cpt_1)
-            p_2 = copy.deepcopy(cpt_2)
+            p_1 = deepcopy(cpt_1)
+            p_2 = deepcopy(cpt_2)
 
             index_1 = 0
             for col in cols:
