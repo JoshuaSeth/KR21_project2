@@ -22,9 +22,9 @@ class BNReasoner:
             self.bn = net
 
         # init logger
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
+        logging.basicConfig(
+            format='%(levelname)s: %(message)s', level=log_level)
 
-    
     def d_separation(self, network, x, y, z):
         z_parents = self.bn.get_parents(z)
         z_children = self.bn.get_children(z)
@@ -58,7 +58,6 @@ class BNReasoner:
                             nodes_to_visit.append((parents, 'asc'))
         return True
 
-
     def order_min_degree(self, network: BayesNet) -> List[str]:
         """
         Orders nodes by their degree (smallest first)
@@ -69,7 +68,6 @@ class BNReasoner:
         degrees = sorted(degrees, key=lambda x: x[1])
         order = [x[0] for x in degrees]
         return order
-
 
     def order_min_fill(self, network: BayesNet) -> List[str]:
         """
@@ -92,8 +90,6 @@ class BNReasoner:
         new_edges = sorted(new_edges, key=lambda x: x[1])
         return [x[0] for x in new_edges]
 
-
-
     def order_random(self, network: BayesNet) -> List[str]:
         """
         Returns a random order of the nodes
@@ -101,7 +97,6 @@ class BNReasoner:
         vars = network.get_all_variables()
         random.shuffle(vars)
         return vars
-
 
     def prune(self, query: List[str], evidence: Dict[str, bool]) -> BayesNet:
         """
@@ -118,7 +113,6 @@ class BNReasoner:
                     new_bn.del_var(var)
                     changes = True
 
-            
             cpts = new_bn.get_all_cpts()
             for evidence_var, assignment in evidence.items():
                 # update cpts
@@ -135,7 +129,6 @@ class BNReasoner:
                     new_bn.del_edge((evidence_var, child))
 
         return new_bn
-
 
     def get_marginal_distribution(self, Q, E):
         """
@@ -160,16 +153,15 @@ class BNReasoner:
                 ancestor = ancestors[i]
 
                 # And multiply with the next
-                current_table = self.multiply_cpts(
+                current_table = self.multiply_factors(
                     current_table, self.bn.get_cpt(ancestor))
-                results.append(current_table)
+            results.append(current_table)
 
         # Then multiply those two final resulting vars in Q
         end = results[0]
         for j in range(1, len(results)):
-            end = self.multiply_cpts(end, results[j])
+            end = self.multiply_factors(end, results[j])
 
-        end = self.get_joint_probability_distribution()
         # end = self.bn.get_cpt(Q[0])
         # for i in range(1, len(Q)):
         #     end = self.multiply_cpts(end, self.bn.get_cpt(Q[i]))
@@ -191,7 +183,6 @@ class BNReasoner:
 
         return end
 
-    
     def summing_out(self, cpt: pd.DataFrame, sum_out_variables: List[str], assignment: Dict[str, bool]) -> pd.DataFrame:
         """
         Takes set of variables (given als list of strings) that needs to be
@@ -209,12 +200,12 @@ class BNReasoner:
             return cpt['p'].sum()
 
         # sum up p values if rows are similar
-        PD_new = dropped_cpt.groupby(remaining_variables).aggregate({'p': 'sum'})
+        PD_new = dropped_cpt.groupby(
+            remaining_variables).aggregate({'p': 'sum'})
         PD_new.reset_index(inplace=True)
 
         return PD_new
 
-    
     def maxing_out(self, cpt: pd.DataFrame, max_out_variables: List[str], assignment: Dict[str, bool]) -> pd.DataFrame:
         """
         Takes set of variables (given als list of strings) that needs to be
@@ -233,13 +224,13 @@ class BNReasoner:
             for var in cpt.columns.values[:-1]:
                 assignment[var] = cpt[var][max_id]
             return None
-                
+
         # take max p value for remaining rows if they are similar
-        PD_new = dropped_cpt.groupby(remaining_variables).aggregate({'p': 'max'})
+        PD_new = dropped_cpt.groupby(
+            remaining_variables).aggregate({'p': 'max'})
         PD_new.reset_index(inplace=True)
         return PD_new
 
-    
     def multiply_factors(self, cpt1: pd.DataFrame, cpt2: pd.DataFrame) -> pd.DataFrame:
         """
         """
@@ -256,13 +247,12 @@ class BNReasoner:
                 for i, row1 in cpt1.iterrows():
                     if row1[var] == t_value:
                         cpt1.at[i, 'p'] *= row2['p']
-                
+
                 #indices = cpt1[var] == t_value
                 #cpt1.loc[cpt1[var] == t_value, 'p'] *= row['p']
 
         return cpt1
 
-    
     def multiply_n_factors(self, cpts: List[pd.DataFrame]) -> pd.DataFrame:
         """
         """
@@ -274,7 +264,6 @@ class BNReasoner:
             result = cpts[0]
         return result
 
-
     def condition(self, cpt: pd.DataFrame, evidence: Dict[str, bool]) -> pd.DataFrame:
         """
         Given a CPT and evidence, returns a conditioned CPT
@@ -284,7 +273,6 @@ class BNReasoner:
                 cpt = cpt.loc[cpt[var] == value]
         return cpt
 
-
     def MPE(self, evidence: Dict[str, bool], order_function=order_random):
         """
         """
@@ -293,7 +281,6 @@ class BNReasoner:
         pruned_network = self.prune([], evidence)
         assignment = dict()
 
-        
         # get elimination order
         logging.info('Getting elimination order')
         if order_function in [self.order_random, self.order_min_degree, self.order_min_fill]:
@@ -333,7 +320,6 @@ class BNReasoner:
 
         return assignment
 
-
     def MAP(self, query: List[str], evidence: Dict[str, bool], order_function=order_random):
         """
         """
@@ -343,8 +329,10 @@ class BNReasoner:
         # get elimination order
         if order_function in [self.order_random, self.order_min_degree, self.order_min_fill]:
             temp_elimination_order = order_function(pruned_network)
-            elimination_order_1 = [x for x in temp_elimination_order if x not in query]
-            elimination_order_2 = [x for x in temp_elimination_order if x in query]
+            elimination_order_1 = [
+                x for x in temp_elimination_order if x not in query]
+            elimination_order_2 = [
+                x for x in temp_elimination_order if x in query]
             elimination_order = elimination_order_1 + elimination_order_2
         else:
             return "Error: order_function not recognized"
@@ -378,7 +366,3 @@ class BNReasoner:
                 cpts['+'.join(fks)] = fi
 
         return assignment
-
-
-        
-

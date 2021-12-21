@@ -15,10 +15,12 @@ BR = BNReasoner(BN)
 
 
 cpt_1 = BR.bn.get_cpt("Winter?")
-cpt_2 = BR.bn.get_cpt("Sprinkler?")
-
+cpt_2 = BR.bn.get_cpt("Slippery Road?")
+print(cpt_2)
+print(BR.multiply_factors(cpt_1, cpt_2))
+BR.bn.draw_structure()
 p = BR.get_marginal_distribution(
-    ["Wet Grass?", "Slippery Road?"], {})
+    ["Winter?", "Slippery Road?"], {})
 
 print(p)
 
