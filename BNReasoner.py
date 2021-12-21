@@ -225,15 +225,16 @@ class BNReasoner:
         for j in range(1, len(results)):
             end = self.multiply_cpts_extensive(end, results[j])
 
+        print("E", E)
         # Marginalize out the evidence
         for col in list(end)[:-1]:
             # If E is empty this will simply be a-priori distribution
-            if col not in list(E.keys()) and col not in Q:
+            if col not in E and col not in Q:
                 end.drop(col, 1, inplace=True)
                 end = end.groupby(
                     list(end)[:-1]).aggregate({'p': 'sum'}).reset_index()
             # Else we will need to drop the rows contrary to evidence instead of whole variable
-            if col in list(E.keys()) and col not in Q:
+            if col in E and col not in Q:
                 end = end[end[col] == E[col]]  # rows contrary evidence
                 # Only relevant rows still here so drop col
                 end.drop(col, 1, inplace=True)

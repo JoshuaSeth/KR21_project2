@@ -20,11 +20,15 @@ cpt_2 = BR.bn.get_cpt("Cardiovascular_disease")
 # print(cpt_1)
 # print(cpt_2)
 
-p = BR.get_marginal_distribution(
-    ["Cardiovascular_disease"], {"Tightnessinchest": True, "Highbloodpressure": True, "Leftventricularhypertrophy": False})
+# p = BR.get_marginal_distribution(
+#     ["Chronic_lung_disease"], {"Tightness_in_chest": True, "High_blood_pressure": True, "Left_ventricular_hypertrophy": True})
+
+# p = BR.MAP(["Chronic_lung_disease", "Cardiovascular_disease", "Smoker", "Obesity"], {"Tightness_in_chest": True,
+#                                                                                      "High_blood_pressure": True, "Left_ventricular_hypertrophy": True}, order_function=BR.order_min_fill)
+p = BR.MPE({"Cardiovascular_disease": True,
+           "Obesity": False}, order_function=BR.order_min_fill)
 
 print(p)
-
 
 # cpt_3 = BR.bn.get_cpt("Wet Grass?")
 # cpt_1 = cpt_1.drop([0])
