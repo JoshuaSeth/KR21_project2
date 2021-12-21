@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple, Union
 from BayesNet import BayesNet
 from copy import copy, deepcopy
-
+from tqdm import tqdm
 import logging
 import networkx as nx
 import pandas as pd
@@ -105,7 +105,7 @@ class BNReasoner:
         a = s.to_numpy()  # s.values (pandas<0.24)
         return (a[0] == a).all()
 
-    def multiply_cpts_extensive(self, cpt_1, cpt_2):
+    def multiply_cpts_extensive(self, cpt_1, cpt_2, verbose=False):
         """
         Given 2 probability tables multiplies them and returns the multiplied CPT. Example usage:
         cpt_1 = BN.get_cpt("hear-bark")
@@ -152,6 +152,8 @@ class BNReasoner:
         # 2. Construct new CPT
         new_cpt_cols = cpt_1_no_p + vars_to_add
         new_cpt_len = pow(2, len(new_cpt_cols)-1-discount)
+        if (verbose):
+            print("length of result of multiplication: ", new_cpt_len)
         new_cpt = pd.DataFrame(columns=new_cpt_cols,
                                index=range(new_cpt_len), dtype=object)
 
@@ -173,7 +175,7 @@ class BNReasoner:
         # print(new_cpt)
 
         # 4. Get the rows in the current CPTs that correspond to values and multiply their p's
-        for index, row in new_cpt.iterrows():
+        for index, row in tqdm(new_cpt.iterrows()):
             cols = list(new_cpt)[: -1]
             p_1 = deepcopy(cpt_1)
             p_2 = deepcopy(cpt_2)
@@ -185,8 +187,6 @@ class BNReasoner:
                 if col in list(cpt_2):
                     p_2 = p_2.loc[p_2[col] == row[index_1]]
                 index_1 += 1
-            # print(p_1)
-            # print(p_2)
             result = float(p_1["p"].item()) * float(p_2["p"].item())
             new_cpt["p"][index] = result
 
@@ -211,7 +211,7 @@ class BNReasoner:
 
             # multiply until arriving at this var
             current_table = self.bn.get_cpt(ancestors[0])
-            for i in range(1, len(ancestors)):
+            for i in tqdm(range(1, len(ancestors))):
                 ancestor = ancestors[i]
 
                 # And multiply with the next
@@ -221,6 +221,7 @@ class BNReasoner:
 
         # Then multiply those two final resulting vars in Q
         end = results[0]
+        print("Start multiplying 2 CPTS")
         for j in range(1, len(results)):
             end = self.multiply_cpts_extensive(end, results[j])
 

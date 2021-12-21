@@ -14,18 +14,17 @@ BR = BNReasoner(BN)
 # var_1, var_2, evidence = "bowel-problem", "light-on", ["dog-out"]
 
 
-# cpt_1 = BR.bn.get_cpt("Winter?")
-# cpt_2 = BR.bn.get_cpt("Slippery Road?")
+cpt_1 = BR.bn.get_cpt("Chronic_lung_disease")
+cpt_2 = BR.bn.get_cpt("Cardiovascular_disease")
+# print(BR.multiply_cpts_extensive(cpt_1, cpt_2))
+# print(cpt_1)
 # print(cpt_2)
-# print(BR.multiply_factors(cpt_1, cpt_2))
-BR.bn.draw_structure()
-# p = BR.get_marginal_distribution(
-#     ["Winter?", "Slippery Road?"], {"Rain?": True})
 
-# print(p)
+p = BR.get_marginal_distribution(
+    ["Cardiovascular_disease"], {"Tightnessinchest": True, "Highbloodpressure": True, "Leftventricularhypertrophy": False})
 
-print(BR.d_separation("Cardiovascular_disease",
-      "Chronic_lung_disease", ["Decreased_mental_alertness"]))
+print(p)
+
 
 # cpt_3 = BR.bn.get_cpt("Wet Grass?")
 # cpt_1 = cpt_1.drop([0])
